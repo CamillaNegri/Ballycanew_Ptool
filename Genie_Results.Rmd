@@ -6,10 +6,10 @@ date: "10/10/2022"
 ---
 
 ## Introduction
-
+This is a notebook aimed at analyzing the results from the two BBNs developed in this studies. The code for the figures is in a separate notebook.
 
 ## Aim 
-The BBN results extracted from GeNie are plotted and analyzed here. We also calculate means and medians of the two models (A describing diffuse sources, and B with the addition of point sources in the form of farmyards and septic tanks), and calculate the percentage bias.  
+The BBN results extracted from GeNie are analyzed here. We  calculate means and medians of the two models (A describing diffuse sources, and B with the addition of point sources in the form of farmyards and septic tanks), as well as the percentage bias.  
 
 
 ```{r setup, include=FALSE}
@@ -19,50 +19,45 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(ggpubr)
-library(ggbeeswarm)
 library(lubridate)
 library(tidyverse)
 library(SHELF)
-library(knitr)
 library(hydroGOF)
-library(knitr)
-library(gghalves) 
-library(ggdist) 
 ```
 
-# Load data and predictions
+Load data and model predictions
 ```{r}
 # load observed data 
 hydrology<-read.csv("data/Ballycanew_data.csv")
 
+# Read csv of fitted to observed monthly TRP
+sampled_observedTRP<-read.csv("data/monthly_fitted_TRP_observations.csv" ) # these are obtained in the ObservedMonthlyP.Rmd file
+```
+
+Model predictions are obtained by running the Model(s) in genie and then extracting the values from the node "In stream TRP concentration mg L-1" (the node handle or identifier is "PConcentration")
+```{r}
 # model predictions
 diffuseconcentrations<-read.csv("results/20230920_DiffusePtool_v4.csv", header=T)
-names(diffuseconcentrations)[names(diffuseconcentrations) == 'ï..Pconcentration_mgL']<- 'Pconcentration_mgL'
+names(diffuseconcentrations)[names(diffuseconcentrations) == 'ï..Pconcentration_mgL']<- 'Pconcentration_mgL' 
 
-head(diffuseconcentrations)
+head(diffuseconcentrations) # this is Model A
 
 global_ptool_conc<-read.csv("results/20230920_Ptool_v4.csv", header=T)
-names(global_ptool_conc)[names(global_ptool_conc) == "PconcentrationmgL"]<- 'Pconcentration_mgL'
-
-head(global_ptool_conc)
+names(global_ptool_conc)[names(global_ptool_conc) == "PconcentrationmgL"]<- 'Pconcentration_mgL' 
+#head(global_ptool_conc) # this is Model B
 
 # monthly data
 diffuseconcentrations_months<-read.csv("results/20230920_DiffusePtool_v4_months.csv", header=T)
 names(diffuseconcentrations_months)[names(diffuseconcentrations_months) == 'ï..January']<- 'January'
-
-head(diffuseconcentrations_months)
+#head(diffuseconcentrations_months)
 
 global_ptool_conc_months<-read.csv("results/20230920_Ptool_v4_months.csv", header=T)
 names(global_ptool_conc_months)[names(global_ptool_conc_months) == 'ï..January']<- 'January'
-
-head(global_ptool_conc_months)
-
-# Read csv of fitted to observed monthly TP
-sampled_observedTRP<-read.csv("data/monthly_fitted_TRP_observations.csv" )
+#head(global_ptool_conc_months)
 ```
 
-# Replace negative values in the results with 0s
+Replace negative values in the results with 0s
+This is a bit redundant because later in the code we censor the data by the limits of detection. 
 ```{r}
 global_ptool_conc[global_ptool_conc < 0] <- 0
 global_ptool_conc_months[global_ptool_conc_months < 0] <- 0
@@ -123,8 +118,6 @@ hydrology%>%
   facet_wrap(~month)
 ```
 
-make same histogram for the model and then compare histograms 
-use month, TRP, model columns. Also useful to scale by the number of counts or any other way to scale the model hist and the data hist so they look 
 
 # Average mean and sd of TRP by month
 These can be compared to mean monthly Genie concentrations
@@ -217,8 +210,7 @@ TRP_values<-Pconc2 %>%
 TRP_values
 ```
 
-values are in the ave column
-probabilities are in qtile column
+Values are in the ave column, probabilities are in qtile column. These will be used to get a distribution with the `SHELF` package.
 
 # Distribution fitted by averaging monthly quantiles of TRP [mg/L] using 1212 datapoints
 ```{r}
@@ -226,22 +218,23 @@ myTRPfit<-fitdist(vals=TRP_values$ave, probs = TRP_values$qtile, lower = 0)
 plotfit(myTRPfit)
 ```
 
-# Sample from the elicited TRP distribution
+Sample from the elicited TRP distribution
 ```{r}
-sampled_observedTRP<-sampleFit(myTRPfit, 10000) # this creates an data type called "double"
+sampled_observedTRP<-sampleFit(myTRPfit, 10000) 
 lognormal_observed_TRP<-sampled_observedTRP[1:10000, 4] #subset only the column we're interested in
 ```
 
+`lognormal_observed_TRP` is the distribution that will be used to calculate the percentage bias. 
 
 #############################################################################################################################
 
-## Analyze Diffuse Ptool
+## Analyze Diffuse Ptool (Model A)
 Summarize simulations results
 ```{r}
 names(diffuseconcentrations)[names(diffuseconcentrations) == 'ï..Pconcentration_mgL']<- 'Pconcentration_mgL'
 
 summary(diffuseconcentrations)
-quantile(diffuseconcentrations$Pconcentration_mgL, probs=c(0.05, 0.25, 0.5, 0.75))
+quantile(diffuseconcentrations$Pconcentration_mgL, probs=c(0.05, 0.25, 0.5, 0.75)) # these are uncensored predictions
 ```
 
 # Get mean, lower and upper limit (filtered by LOD)
@@ -270,14 +263,14 @@ quantiles_diffuse_TRP_BBN<-diffuseconcentrations%>%
 
 quantiles_diffuse_TRP_BBN
 ```
-
-## Analyze Ptool point and diffuse
+ 
+## Analyze Ptool point and diffuse (Model B)
 This adds point sources: Septic Tanks and Farmyards. 
 ```{r}
 names(global_ptool_conc)[names(global_ptool_conc) == 'ï..PconcentrationmgL'] <- 'Pconcentration_mgL'
 
 summary(global_ptool_conc)
-quantile(global_ptool_conc$Pconcentration_mgL, probs=c(0.05, 0.25, 0.5, 0.75))
+quantile(global_ptool_conc$Pconcentration_mgL, probs=c(0.05, 0.25, 0.5, 0.75)) # these are uncensored predictions
 ```
 
 # Get mean, lower and upper limit for the global model (filtered by LOD)
@@ -336,7 +329,7 @@ names(comparison_df)[names(comparison_df) == 'lognormal_observed_TRP'] <- 'obser
 ```{r}
 count_global<-comparison_df%>%
   filter(global_ptool>= 0.01 & global_ptool <= 5)  %>%
-  count() #$
+  count() 
 
 count_diffuse<-comparison_df%>%
   filter(diffuse_ptool>= 0.01 & diffuse_ptool <= 5)  %>%
@@ -355,7 +348,7 @@ global 8031
 diffuse 7221
 
 ## Goodness of fit 
-# Compare GeNie concentrations (diffuse P model) with fitted TP from observed. This is possible because we previously produced the `lognormal_observed_TP` & `lognormal_observed_TRP` data.
+Compare GeNie concentrations of both Models with fitted TRP from observed. This is possible because we previously produced the `lognormal_observed_TRP` distribution.
 
 # Filter out the concentrations that are out of limit detection
 ```{r}
@@ -426,8 +419,8 @@ Number of obs and number of sim needs to be the same, therefore, when sampling t
 
 # PBIAS Model A
 ```{r}
-sim<-filtered_diffuse$diffuse_ptool # filtered GeNie simulations
-obs<-sample(lognormal_observed_TRP,7229) # observed fitted to lognormal
+sim<-filtered_diffuse$diffuse_ptool # filtered GeNie simulations (Model A)
+obs<-sample(lognormal_observed_TRP,7229) # observed fitted to lognormal, 7229 is the number of sims
 ```
 
 ```{r}
@@ -436,12 +429,12 @@ pbias(sim, obs, na.rm=T) # only diffuse
 
 # PBIAS Model B
 ```{r}
-sim2<-filtered_global$global_ptool # GeNie simulations global model
-obs2<-sample(lognormal_observed_TRP,7851) # observed fitted to lognormal
+sim2<-filtered_global$global_ptool # GeNie simulations global model (Model B)
+obs2<-sample(lognormal_observed_TRP,7851) # observed fitted to lognormal, 7851 is the number of sims
 ```
 
 ```{r}
-pbias(sim2, obs2, na.rm=F) # global model
+pbias(sim2, obs2, na.rm=F) # global model (Model B)
 ```
 
 # PBIAS of every month - Model B
@@ -459,7 +452,8 @@ for(i in 1:ncol(filtered_monthly_concentrations)) { # for-loop over columns
   }
 ```
 
-# PBIAS of every month - Model A (filter the diffuse concentrations first)
+# PBIAS of every month - Model A 
+(filter the diffuse concentrations first)
 
 ```{r}
 filtered_diffuse_monthly<-diffuseconcentrations_months
@@ -506,7 +500,7 @@ for(i in 1:ncol(diffuseconcentrations_months)) { # for-loop over columns
 
 ## SUMMARY STATISTICS
 
-Recall that the csv of fitted to observed monthly TRP is called `sampled_observedTRP`, while `global_ptool_conc_months` is the predicted TP from the BBN
+Recall that the csv of fitted to observed monthly TRP is called `sampled_observedTRP`, while `global_ptool_conc_months` is the predicted TRP from the BBN
 ```{r}
 # monthly data
 global_ptool_conc_months<-read.csv("results/20230920_Ptool_v4_months.csv", header=T)
@@ -518,7 +512,7 @@ sampled_observedTRP
 ```
 
 
-# Make labels and prepare df for figures
+# Make labels and prepare dataframes
 ```{r}
 labels<-c("January","February","March","April",          "May","June","July","August","September","October","November","December")
 
@@ -533,6 +527,7 @@ diffuseconcentrations_months1<-diffuseconcentrations_months%>%
 ```
 
 # Average mean and sd of TRP by month in each model (filtered)
+Model A
 ```{r}
 monthly_TRP_diffuse<-diffuseconcentrations_months1%>%
   filter(concentrations>= 0.01 & concentrations <= 5)  %>%
@@ -560,6 +555,7 @@ monthly_TRP_diffuse<-diffuseconcentrations_months1%>%
 write.csv(monthly_TRP_diffuse,"results/20230920_filtered_DiffusePtool_v4_monthly_means.csv")
 ```
 
+Model B
 ```{r}
 monthly_TRP_ptool<-global_ptool_conc_months1%>%
   filter(concentrations>= 0.01 & concentrations <= 5)  %>%
@@ -589,6 +585,7 @@ write.csv(monthly_TRP_ptool,"results/20230920_filtered_Ptool_v4_monthly_means.cs
 ```
 
 # Monthly median each model (filtered data)
+Model A
 ```{r}
 monthly_TRP_diffuse_median<-diffuseconcentrations_months1%>%
   filter(concentrations>= 0.01 & concentrations <= 5)  %>%
@@ -607,6 +604,11 @@ monthly_TRP_diffuse_median<-diffuseconcentrations_months1%>%
   group_by(months, month)%>%
   summarise(median_trp=median(concentrations,na.rm=T))
 
+write.csv(monthly_TRP_diffuse_median,"results/20230920_filtered_DiffusePtool_v4_monthly_median.csv")
+```
+
+Model B
+```{r}
 monthly_TRP_ptool_median<-global_ptool_conc_months1%>%
   filter(concentrations>= 0.01 & concentrations <= 5)  %>%
   mutate(months=case_when(month=="January"~1,
@@ -624,14 +626,14 @@ monthly_TRP_ptool_median<-global_ptool_conc_months1%>%
   group_by(months, month)%>%
   summarise(median_trp=median(concentrations,na.rm=T))
 
-write.csv(monthly_TRP_diffuse_median,"results/20230920_filtered_DiffusePtool_v4_monthly_median.csv")
+
 write.csv(monthly_TRP_ptool_median,"results/20230920_filtered_Ptool_v4_monthly_median.csv")
 ```
 
 
 ## Compare median predictions with fitted to observed (months= columns of both df)
 
-merge two dataframes in one, marking clearly what is observed and what is predicted. Recall that the csv of fitted to observed monthly TP is called `sampled_observedTP`, while `global_ptool_conc_months` is the predicted TP from the BBN
+merge two dataframes in one, marking clearly what is observed and what is predicted. Recall that the csv of fitted to observed monthly TRP is called `sampled_observedTRP`, while `global_ptool_conc_months` is the predicted TRP from the BBN.
 ```{r}
 # add a column to identify what is what
 sampled_observedTRP$model<-as.factor("sampled.observations")
@@ -666,10 +668,11 @@ eta
 ```
 
 
-#########################################################################
+################################################################
 
-## Compare predictions to actual monthly observations (months= columns of both df)
-# make a df of monthly TRP observations 
+## Compare predictions to actual monthly observations (months= columns of both dataframes)
+
+make a dataframe of monthly TRP observations 
 ```{r}
 monthly_observedTRP<-hydrology%>%
   group_by(month)%>%
@@ -681,7 +684,7 @@ monthly_observedTRP<-hydrology%>%
 monthly_observedTRP
 ```
 
-# Merge two df: observations and predictions
+# Merge two dataframes: observations and predictions
 ```{r}
 # add a column to identify what is what
 monthly_observedTRP$model<-as.factor("observations")
@@ -711,7 +714,6 @@ total_diffuse_months1$month<-as.factor(total_diffuse_months1$month)
 total_diffuse_months1
 nrow(total_diffuse_months1)
 ```
-
 
 # use plyr to calculate mean
 ```{r}
