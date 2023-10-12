@@ -1,0 +1,743 @@
+---
+title: "Bayesian network modelling of phosphorus pollution in agricultural catchments"
+author: "Camilla Negri"
+date: "10/10/2022"
+
+---
+
+## Introduction
+
+
+## Aim 
+The BBN results extracted from GeNie are plotted and analyzed here. We also calculate means and medians of the two models (A describing diffuse sources, and B with the addition of point sources in the form of farmyards and septic tanks), and calculate the percentage bias.  
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggpubr)
+library(ggbeeswarm)
+library(lubridate)
+library(tidyverse)
+library(SHELF)
+library(knitr)
+library(hydroGOF)
+library(knitr)
+library(gghalves) 
+library(ggdist) 
+```
+
+# Load data and predictions
+```{r}
+# load observed data 
+hydrology<-read.csv("data/Ballycanew_data.csv")
+
+# model predictions
+diffuseconcentrations<-read.csv("results/20230920_DiffusePtool_v4.csv", header=T)
+names(diffuseconcentrations)[names(diffuseconcentrations) == 'ï..Pconcentration_mgL']<- 'Pconcentration_mgL'
+
+head(diffuseconcentrations)
+
+global_ptool_conc<-read.csv("results/20230920_Ptool_v4.csv", header=T)
+names(global_ptool_conc)[names(global_ptool_conc) == "PconcentrationmgL"]<- 'Pconcentration_mgL'
+
+head(global_ptool_conc)
+
+# monthly data
+diffuseconcentrations_months<-read.csv("results/20230920_DiffusePtool_v4_months.csv", header=T)
+names(diffuseconcentrations_months)[names(diffuseconcentrations_months) == 'ï..January']<- 'January'
+
+head(diffuseconcentrations_months)
+
+global_ptool_conc_months<-read.csv("results/20230920_Ptool_v4_months.csv", header=T)
+names(global_ptool_conc_months)[names(global_ptool_conc_months) == 'ï..January']<- 'January'
+
+head(global_ptool_conc_months)
+
+# Read csv of fitted to observed monthly TP
+sampled_observedTRP<-read.csv("data/monthly_fitted_TRP_observations.csv" )
+```
+
+# Replace negative values in the results with 0s
+```{r}
+global_ptool_conc[global_ptool_conc < 0] <- 0
+global_ptool_conc_months[global_ptool_conc_months < 0] <- 0
+```
+
+##Analyze Phohorus concentrations in the stream [Oct 2009-Dec 2016]
+
+# Load observed P concentrations
+TRP = Total Reactive Phosphorus [mg/L], measured by Phosphax every 10 minutes, here daily average
+
+```{r}
+# rename P column
+hydrology$TRP<-hydrology$TRP..mg.l.
+summary(hydrology)
+quantile(hydrology$TRP)
+```
+
+# Parsing data a monthly time step
+```{r parsing_data}
+hydrology$Date<- parse_date_time(hydrology$Date, "d/m/Y")
+
+hydrology$day <- yday(hydrology$Date)
+hydrology$months <- month(hydrology$Date)
+hydrology$year <- year(hydrology$Date)
+
+# assign months
+hydrology$month<-NA # new blank column
+hydrology$month[hydrology$months %in% c(1)]<-"January"
+hydrology$month[hydrology$months %in% c(2)]<-"February"
+hydrology$month[hydrology$months %in% c(3)]<-"March"
+hydrology$month[hydrology$months %in% c(4)]<-"April"
+hydrology$month[hydrology$months %in% c(5)]<-"May"
+hydrology$month[hydrology$months %in% c(6)]<-"June"
+hydrology$month[hydrology$months %in% c(7)]<-"July"
+hydrology$month[hydrology$months %in% c(8)]<-"August"
+hydrology$month[hydrology$months %in% c(9)]<-"September"
+hydrology$month[hydrology$months %in% c(10)]<-"October"
+hydrology$month[hydrology$months %in% c(11)]<-"November"
+hydrology$month[hydrology$months %in% c(12)]<-"December"
+
+# %in% value matching = returns a vector of the positions of (first) matches of its first argument in its second
+
+hydrology$month <- factor(hydrology$month, levels=month.name) 
+# encodes a vector as a factor
+head(hydrology)
+```
+
+# Plot daily TRP mg/L by month
+```{r}
+hydrology%>%
+  ggplot(aes(x=TRP))+
+  geom_histogram()+
+  facet_wrap(~month)
+
+hydrology%>%
+  ggplot(aes(x=log10(TRP)))+
+  geom_histogram()+
+  facet_wrap(~month)
+```
+
+make same histogram for the model and then compare histograms 
+use month, TRP, model columns. Also useful to scale by the number of counts or any other way to scale the model hist and the data hist so they look 
+
+# Average mean and sd of TRP by month
+These can be compared to mean monthly Genie concentrations
+```{r}
+monthly_TRP<-hydrology%>%
+  group_by(month,months)%>%
+  filter(TRP>= 0.01 & TRP <= 5)%>%
+  summarise(mean_trp=mean(log10(TRP)), # mean and sd of log TRP
+            sd_trp=sd(log10(TRP)))%>%
+  mutate(low_trp=mean_trp-sd_trp, # lower and upper limits (1 standard dev.)
+         upper_trp=mean_trp+sd_trp)%>%
+  dplyr::select(-sd_trp)%>%
+  mutate(mean_trp=10**mean_trp, # convert back to linear space so mg L
+         low_trp=10**low_trp,
+         upper_trp=10**upper_trp)
+
+monthly_TRP
+```
+
+# monthly median
+```{r}
+monthly_TRP_median<-hydrology%>%
+  group_by(month,months)%>%
+  filter(TRP>= 0.01 & TRP <= 5)%>%
+summarise(median_trp=median(TRP,na.rm=T))
+monthly_TRP_median
+```
+
+# Find mean, lower, upper limits for overall instead of each month
+```{r}
+overall_monthly_TRP<-hydrology%>%
+  filter(TRP>= 0.01 & TRP <= 5)%>%
+  summarise(mean_trp=mean(log10(TRP)), # mean and sd of log TRP
+            sd_trp=sd(log10(TRP)))%>%
+  mutate(low_trp=mean_trp-sd_trp, # lower and upper limits (1 standard dev.)
+         upper_trp=mean_trp+sd_trp)%>%
+  dplyr::select(-sd_trp)%>%
+  mutate(mean_trp=10**mean_trp, # convert back to linear space so mg L
+         low_trp=10**low_trp,
+         upper_trp=10**upper_trp)
+
+overall_monthly_TRP
+```
+
+```{r}
+overall_TRP_observations<-hydrology%>%
+  filter(TRP>= 0.01 & TRP <= 5)%>%
+    summarise(median_trp=median(TRP,na.rm=T),
+            quant5th=quantile(TRP,0.05),
+            quant25th=quantile(TRP,0.25),
+            quant75th=quantile(TRP,0.75))
+overall_TRP_observations
+```
+
+
+# Summarize TRP 
+```{r describing_data}
+hydrology1<-dplyr::group_by(hydrology,year,month)
+
+hydrology_summary<- dplyr::summarize(hydrology1,countTRP=sum(!is.na(TRP)), TRPtotal=sum(TRP,na.rm=T), TRPmean=TRPtotal/countTRP)
+
+Pconc1<-dplyr::group_by(hydrology,year,month)
+
+# to obtain means and quantiles for TRP 
+Pconc_summary<- dplyr::summarize(hydrology1, countTRP=sum(!is.na(TRP)),TRPmean=mean(TRP,na.rm=T),TRPtotal=sum(TRP,na.rm=T),TRP_5quant=quantile(TRP, probs =0.05), TRP_25quant=quantile(TRP, probs = 0.25), TRPmedian=median(TRP,na.rm=TRUE), TRP_75quant=quantile(TRP, probs = 0.75))
+```
+
+# Summary of TRP per month 
+```{r, monthly summary}
+hydrology2<-dplyr::group_by(hydrology_summary,month)
+
+hydrology_months_summary<- dplyr::summarize(hydrology2,         countTRPtotal=sum(!is.na(TRPtotal)), TRPmean=mean(TRPtotal,na.rm=T))
+
+Pconc2<-dplyr::group_by(Pconc_summary,month)
+
+Pconc_months_summary<- dplyr::summarize(Pconc2, countTRPtotal=sum(!is.na(TRPtotal)), TRPmean=mean(TRPmean,na.rm=T),                              meanTRP_5quant=mean(TRP_5quant, na.rm=T), meanTRP_25quant=mean(TRP_25quant, na.rm=T), meanTRPmedian=mean(TRPmedian,na.rm=T), meanTRP_75quant=mean(TRP_75quant, na.rm=T)) 
+```
+
+
+# Get TRP values based on lots of probabilities, not just a few quantiles, get all quantiles from 0 to 100
+```{r get quantiles}
+TRP_probs<-seq(0, 1, 0.01)
+
+TRP_values<-Pconc2 %>%
+  dplyr::summarize(quant = quantile(TRPmean, probs=TRP_probs)) %>%
+  mutate(qtile = TRP_probs) %>%
+  group_by(qtile) %>%
+  dplyr::summarize(ave = mean(quant)) # group by quantiles and get avg
+      
+TRP_values
+```
+
+values are in the ave column
+probabilities are in qtile column
+
+# Distribution fitted by averaging monthly quantiles of TRP [mg/L] using 1212 datapoints
+```{r}
+myTRPfit<-fitdist(vals=TRP_values$ave, probs = TRP_values$qtile, lower = 0)
+plotfit(myTRPfit)
+```
+
+# Sample from the elicited TRP distribution
+```{r}
+sampled_observedTRP<-sampleFit(myTRPfit, 10000) # this creates an data type called "double"
+lognormal_observed_TRP<-sampled_observedTRP[1:10000, 4] #subset only the column we're interested in
+```
+
+
+#############################################################################################################################
+
+## Analyze Diffuse Ptool
+Summarize simulations results
+```{r}
+names(diffuseconcentrations)[names(diffuseconcentrations) == 'ï..Pconcentration_mgL']<- 'Pconcentration_mgL'
+
+summary(diffuseconcentrations)
+quantile(diffuseconcentrations$Pconcentration_mgL, probs=c(0.05, 0.25, 0.5, 0.75))
+```
+
+# Get mean, lower and upper limit (filtered by LOD)
+```{r}
+overall_monthly_TRP_diffuseBBN<-diffuseconcentrations%>%
+  filter(Pconcentration_mgL>= 0.01 & Pconcentration_mgL <= 5)%>%
+  summarise(mean_trp=mean(log10(Pconcentration_mgL)), # mean and sd of log TRP
+            sd_trp=sd(log10(Pconcentration_mgL)))%>%
+  mutate(low_trp=mean_trp-sd_trp, # lower and upper limits (1 standard dev.)
+         upper_trp=mean_trp+sd_trp)%>%
+  dplyr::select(-sd_trp)%>%
+  mutate(mean_trp=10**mean_trp, # convert back to linear space so mg L
+         low_trp=10**low_trp,
+         upper_trp=10**upper_trp)
+
+overall_monthly_TRP_diffuseBBN
+```
+
+```{r}
+quantiles_diffuse_TRP_BBN<-diffuseconcentrations%>%
+  filter(Pconcentration_mgL >= 0.01 & Pconcentration_mgL <= 5)%>%
+  summarise(median_trp=median(Pconcentration_mgL,na.rm=T),
+            quant5th=quantile(Pconcentration_mgL,0.05),
+            quant25th=quantile(Pconcentration_mgL,0.25),
+            quant75th=quantile(Pconcentration_mgL,0.75))
+
+quantiles_diffuse_TRP_BBN
+```
+
+## Analyze Ptool point and diffuse
+This adds point sources: Septic Tanks and Farmyards. 
+```{r}
+names(global_ptool_conc)[names(global_ptool_conc) == 'ï..PconcentrationmgL'] <- 'Pconcentration_mgL'
+
+summary(global_ptool_conc)
+quantile(global_ptool_conc$Pconcentration_mgL, probs=c(0.05, 0.25, 0.5, 0.75))
+```
+
+# Get mean, lower and upper limit for the global model (filtered by LOD)
+```{r}
+overall_monthly_TRP_BBN<-global_ptool_conc%>%
+  filter(Pconcentration_mgL>= 0.01 & Pconcentration_mgL <= 5)%>%
+  summarise(mean_trp=mean(log10(Pconcentration_mgL)), # mean and sd of log TRP
+            sd_trp=sd(log10(Pconcentration_mgL)))%>%
+  mutate(low_trp=mean_trp-sd_trp, # lower and upper limits (1 standard dev.)
+         upper_trp=mean_trp+sd_trp)%>%
+  dplyr::select(-sd_trp)%>%
+  mutate(mean_trp=10**mean_trp, # convert back to linear space so mg L
+         low_trp=10**low_trp,
+         upper_trp=10**upper_trp)
+
+overall_monthly_TRP_BBN
+```
+
+```{r}
+quantiles_overall_TRP_BBN<-global_ptool_conc%>%
+  filter(Pconcentration_mgL >= 0.01 & Pconcentration_mgL <= 5)%>%
+  summarise(median_trp=median(Pconcentration_mgL,na.rm=T),
+            quant5th=quantile(Pconcentration_mgL,0.05),
+            quant25th=quantile(Pconcentration_mgL,0.25),
+            quant75th=quantile(Pconcentration_mgL,0.75))
+
+quantiles_overall_TRP_BBN
+```
+
+#Compare each month's concentrations with fitted to observed TRP concentrations 
+```{r}
+global_ptool_conc_months1<-global_ptool_conc_months
+global_ptool_conc_months1$FittedLogNormal<-lognormal_observed_TRP
+```
+
+```{r}
+model_labels<-c("January","February","March","April",          "May","June","July","August","September","October","November","December","Fitted to Observed")
+
+global_ptool_conc_months1<-global_ptool_conc_months1%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December","FittedLogNormal"),values_to="concentrations",names_to="model")
+``` 
+
+# Comparison dataframe
+one dataframe with models and observations
+```{r}
+# make dataframe
+comparison_df <- data.frame(global_ptool_conc$Pconcentration_mgL, diffuseconcentrations$Pconcentration_mgL,lognormal_observed_TRP)
+
+# simplify column names 
+names(comparison_df)[names(comparison_df) == 'global_ptool_conc.Pconcentration_mgL'] <- 'global_ptool'
+names(comparison_df)[names(comparison_df) == 'diffuseconcentrations.Pconcentration_mgL'] <- 'diffuse_ptool'
+names(comparison_df)[names(comparison_df) == 'lognormal_observed_TRP'] <- 'observed'
+```
+
+# Count valid samples
+```{r}
+count_global<-comparison_df%>%
+  filter(global_ptool>= 0.01 & global_ptool <= 5)  %>%
+  count() #$
+
+count_diffuse<-comparison_df%>%
+  filter(diffuse_ptool>= 0.01 & diffuse_ptool <= 5)  %>%
+  count()
+
+count_fit_obs<-comparison_df%>%
+  filter(observed>= 0.01 & observed <= 5)  %>%
+  count()
+
+count_global
+count_diffuse
+count_fit_obs
+```
+
+global 8031
+diffuse 7221
+
+## Goodness of fit 
+# Compare GeNie concentrations (diffuse P model) with fitted TP from observed. This is possible because we previously produced the `lognormal_observed_TP` & `lognormal_observed_TRP` data.
+
+# Filter out the concentrations that are out of limit detection
+```{r}
+filtered_global<-comparison_df%>%
+  filter(global_ptool>= 0.01 & global_ptool <= 5)%>%
+  subset(select = -c(diffuse_ptool, observed))
+filtered_diffuse<-comparison_df%>%
+  filter(diffuse_ptool>= 0.01 & diffuse_ptool <= 5)%>%
+  subset(select = -c(global_ptool, observed))
+```
+
+
+# Load predictions and observations again
+```{r upload monthly data}
+# monthly data
+monthly_concentrations<-read.csv("results/20230920_Ptool_v4_months.csv", header=T)
+names(monthly_concentrations)[names(monthly_concentrations) == 'ï..January']<- 'January'
+
+# Read csv of fitted to observed monthly TRP
+sampled_observedTRP<-read.csv("data/monthly_fitted_TRP_observations.csv" )
+```
+
+filter monthly TRP observations 
+```{r}
+filtered_monthly_concentrations<-monthly_concentrations
+
+filtered_monthly_concentrations$January <- replace(monthly_concentrations$January, monthly_concentrations$January <= 0.01 | monthly_concentrations$January >= 5, NA)
+
+filtered_monthly_concentrations$February <- replace(monthly_concentrations$February, monthly_concentrations$February <= 0.01 | monthly_concentrations$February >= 5, NA)
+
+filtered_monthly_concentrations$March <- replace(monthly_concentrations$March, monthly_concentrations$March <= 0.01 | monthly_concentrations$March >= 5, NA)
+
+filtered_monthly_concentrations$April <- replace(monthly_concentrations$April, monthly_concentrations$April <= 0.01 | monthly_concentrations$April >= 5, NA)
+
+filtered_monthly_concentrations$May <- replace(monthly_concentrations$May, monthly_concentrations$May <= 0.01 | monthly_concentrations$May >= 5, NA)
+
+filtered_monthly_concentrations$June <- replace(monthly_concentrations$June, monthly_concentrations$June <= 0.01 | monthly_concentrations$June >= 5, NA)
+
+filtered_monthly_concentrations$July <- replace(monthly_concentrations$July, monthly_concentrations$July <= 0.01 | monthly_concentrations$July >= 5, NA)
+
+filtered_monthly_concentrations$August <- replace(monthly_concentrations$August, monthly_concentrations$August <= 0.01 | monthly_concentrations$August >= 5, NA)
+
+filtered_monthly_concentrations$September <- replace(monthly_concentrations$September, monthly_concentrations$September <= 0.01 | monthly_concentrations$September >= 5, NA)
+
+filtered_monthly_concentrations$October <- replace(monthly_concentrations$October, monthly_concentrations$October <= 0.01 | monthly_concentrations$October >= 5, NA)
+
+filtered_monthly_concentrations$November <- replace(monthly_concentrations$November, monthly_concentrations$November <= 0.01 | monthly_concentrations$November >= 5, NA)
+
+filtered_monthly_concentrations$December <- replace(monthly_concentrations$December, monthly_concentrations$December <= 0.01 | monthly_concentrations$December >= 5, NA)
+
+sum(is.na(filtered_monthly_concentrations))
+colSums(is.na(filtered_monthly_concentrations))
+```
+
+fix sampled_observedTRP before using it and sample the same amount of rows as in filtered_monthly_concentrations
+```{r}
+sampled_observedTRP = subset(sampled_observedTRP, select = -X)
+
+sampled_observedTRP<-sampled_observedTRP %>%
+  relocate(January, February, March, April, May, June, July, August, September, .before = October)
+```
+
+
+# PBIAS
+The optimal value of PBIAS is 0.0, with low-magnitude values indicating accurate model simulation. Positive values indicate overestimation bias, whereas negative values indicate model underestimation bias. Value: Percent bias between sim and obs. The result is given in percentage (%).
+
+Number of obs and number of sim needs to be the same, therefore, when sampling the obs from the lognormal fitted to the observations, we need to have counted the number of sim first. 
+
+# PBIAS Model A
+```{r}
+sim<-filtered_diffuse$diffuse_ptool # filtered GeNie simulations
+obs<-sample(lognormal_observed_TRP,7229) # observed fitted to lognormal
+```
+
+```{r}
+pbias(sim, obs, na.rm=T) # only diffuse 
+```
+
+# PBIAS Model B
+```{r}
+sim2<-filtered_global$global_ptool # GeNie simulations global model
+obs2<-sample(lognormal_observed_TRP,7851) # observed fitted to lognormal
+```
+
+```{r}
+pbias(sim2, obs2, na.rm=F) # global model
+```
+
+# PBIAS of every month - Model B
+```{r}
+head(filtered_monthly_concentrations)
+head(sampled_observedTRP)
+head(diffuseconcentrations_months)
+```
+
+```{r}
+for(i in 1:ncol(filtered_monthly_concentrations)) { # for-loop over columns
+  sim_months<- filtered_monthly_concentrations
+  obs_months<-sampled_observedTRP # observed fitted to lognormal
+  print(pbias(sim_months[ , i], obs_months[ , i], na.rm=T))
+  }
+```
+
+# PBIAS of every month - Model A (filter the diffuse concentrations first)
+
+```{r}
+filtered_diffuse_monthly<-diffuseconcentrations_months
+
+filtered_diffuse_monthly$January <- replace(diffuseconcentrations_months$January, diffuseconcentrations_months$January <= 0.01 | diffuseconcentrations_months$January >= 5, NA)
+
+filtered_diffuse_monthly$February <- replace(diffuseconcentrations_months$February, diffuseconcentrations_months$February <= 0.01 | diffuseconcentrations_months$February >= 5, NA)
+
+filtered_diffuse_monthly$March <- replace(diffuseconcentrations_months$March, diffuseconcentrations_months$March <= 0.01 | diffuseconcentrations_months$March >= 5, NA)
+
+filtered_diffuse_monthly$April <- replace(diffuseconcentrations_months$April, diffuseconcentrations_months$April <= 0.01 | diffuseconcentrations_months$April >= 5, NA)
+
+filtered_diffuse_monthly$May <- replace(diffuseconcentrations_months$May, diffuseconcentrations_months$May <= 0.01 | diffuseconcentrations_months$May >= 5, NA)
+
+filtered_diffuse_monthly$June <- replace(diffuseconcentrations_months$June, diffuseconcentrations_months$June <= 0.01 | diffuseconcentrations_months$June >= 5, NA)
+
+filtered_diffuse_monthly$July <- replace(diffuseconcentrations_months$July, diffuseconcentrations_months$July <= 0.01 | diffuseconcentrations_months$July >= 5, NA)
+
+filtered_diffuse_monthly$August <- replace(diffuseconcentrations_months$August, diffuseconcentrations_months$August <= 0.01 | diffuseconcentrations_months$August >= 5, NA)
+
+filtered_diffuse_monthly$September <- replace(diffuseconcentrations_months$September, diffuseconcentrations_months$September <= 0.01 | diffuseconcentrations_months$September >= 5, NA)
+
+filtered_diffuse_monthly$October <- replace(diffuseconcentrations_months$October, diffuseconcentrations_months$October <= 0.01 | diffuseconcentrations_months$October >= 5, NA)
+
+filtered_diffuse_monthly$November <- replace(diffuseconcentrations_months$November, diffuseconcentrations_months$November <= 0.01 | diffuseconcentrations_months$November >= 5, NA)
+
+filtered_diffuse_monthly$December <- replace(diffuseconcentrations_months$December, diffuseconcentrations_months$December <= 0.01 | diffuseconcentrations_months$December >= 5, NA)
+
+sum(is.na(filtered_diffuse_monthly))
+colSums(is.na(filtered_diffuse_monthly))
+```
+
+```{r}
+for(i in 1:ncol(diffuseconcentrations_months)) { # for-loop over columns
+  sim_months2<- filtered_diffuse_monthly # diffuse model months
+  obs_months<-sampled_observedTRP # observed fitted to lognormal
+  print(pbias(sim_months2[ , i], obs_months[ , i], na.rm=T))
+  }
+```
+
+
+
+################################################################################################################
+
+## SUMMARY STATISTICS
+
+Recall that the csv of fitted to observed monthly TRP is called `sampled_observedTRP`, while `global_ptool_conc_months` is the predicted TP from the BBN
+```{r}
+# monthly data
+global_ptool_conc_months<-read.csv("results/20230920_Ptool_v4_months.csv", header=T)
+names(global_ptool_conc_months)[names(global_ptool_conc_months) == 'ï..January']<- 'January'
+# Read csv of fitted to observed monthly TRP
+sampled_observedTRP<-read.csv("data/monthly_fitted_TRP_observations.csv" )
+sampled_observedTRP<-subset(sampled_observedTRP, select = -c(X))
+sampled_observedTRP
+```
+
+
+# Make labels and prepare df for figures
+```{r}
+labels<-c("January","February","March","April",          "May","June","July","August","September","October","November","December")
+
+sampled_observedTRP1<-sampled_observedTRP%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+
+global_ptool_conc_months1<-global_ptool_conc_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+
+diffuseconcentrations_months1<-diffuseconcentrations_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+```
+
+# Average mean and sd of TRP by month in each model (filtered)
+```{r}
+monthly_TRP_diffuse<-diffuseconcentrations_months1%>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  mutate(months=case_when(month=="January"~1,
+                          month=="February"~2,
+                          month=="March"~3,
+                          month=="April"~4,
+                          month=="May"~5,
+                          month=="June"~6,
+                          month=="July"~7,
+                          month=="August"~8,
+                          month=="September"~9,
+                          month=="October"~10,
+                          month=="November"~11,
+                          month=="December"~12))%>%
+  group_by(months, month)%>%
+  summarise(mean_trp=mean(log10(concentrations)), sd_trp=sd(log10(concentrations)))%>%
+  mutate(low_trp=mean_trp-sd_trp, # lower and upper limits (1 standard dev.)
+         upper_trp=mean_trp+sd_trp)%>%
+  dplyr::select(-sd_trp)%>%
+  mutate(mean_trp=10**mean_trp, # convert back to linear space so mg L
+         low_trp=10**low_trp,
+         upper_trp=10**upper_trp)
+
+write.csv(monthly_TRP_diffuse,"results/20230920_filtered_DiffusePtool_v4_monthly_means.csv")
+```
+
+```{r}
+monthly_TRP_ptool<-global_ptool_conc_months1%>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  mutate(months=case_when(month=="January"~1,
+                          month=="February"~2,
+                          month=="March"~3,
+                          month=="April"~4,
+                          month=="May"~5,
+                          month=="June"~6,
+                          month=="July"~7,
+                          month=="August"~8,
+                          month=="September"~9,
+                          month=="October"~10,
+                          month=="November"~11,
+                          month=="December"~12))%>%
+  group_by(months, month)%>%
+  summarise(mean_trp=mean(log10(concentrations)), 
+            sd_trp=sd(log10(concentrations)))%>%
+  mutate(low_trp=mean_trp-sd_trp, # lower and upper limits (1 standard dev.)
+         upper_trp=mean_trp+sd_trp)%>%
+  dplyr::select(-sd_trp)%>%
+  mutate(mean_trp=10**mean_trp, # convert back to linear space so mg L
+         low_trp=10**low_trp,
+         upper_trp=10**upper_trp)
+
+write.csv(monthly_TRP_ptool,"results/20230920_filtered_Ptool_v4_monthly_means.csv")
+```
+
+# Monthly median each model (filtered data)
+```{r}
+monthly_TRP_diffuse_median<-diffuseconcentrations_months1%>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  mutate(months=case_when(month=="January"~1,
+                          month=="February"~2,
+                          month=="March"~3,
+                          month=="April"~4,
+                          month=="May"~5,
+                          month=="June"~6,
+                          month=="July"~7,
+                          month=="August"~8,
+                          month=="September"~9,
+                          month=="October"~10,
+                          month=="November"~11,
+                          month=="December"~12))%>%
+  group_by(months, month)%>%
+  summarise(median_trp=median(concentrations,na.rm=T))
+
+monthly_TRP_ptool_median<-global_ptool_conc_months1%>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  mutate(months=case_when(month=="January"~1,
+                          month=="February"~2,
+                          month=="March"~3,
+                          month=="April"~4,
+                          month=="May"~5,
+                          month=="June"~6,
+                          month=="July"~7,
+                          month=="August"~8,
+                          month=="September"~9,
+                          month=="October"~10,
+                          month=="November"~11,
+                          month=="December"~12))%>%
+  group_by(months, month)%>%
+  summarise(median_trp=median(concentrations,na.rm=T))
+
+write.csv(monthly_TRP_diffuse_median,"results/20230920_filtered_DiffusePtool_v4_monthly_median.csv")
+write.csv(monthly_TRP_ptool_median,"results/20230920_filtered_Ptool_v4_monthly_median.csv")
+```
+
+
+## Compare median predictions with fitted to observed (months= columns of both df)
+
+merge two dataframes in one, marking clearly what is observed and what is predicted. Recall that the csv of fitted to observed monthly TP is called `sampled_observedTP`, while `global_ptool_conc_months` is the predicted TP from the BBN
+```{r}
+# add a column to identify what is what
+sampled_observedTRP$model<-as.factor("sampled.observations")
+global_ptool_conc_months$model<-as.factor("predicted.BBN")
+
+# use rbind to merge the two dfs in one
+total <- rbind(sampled_observedTRP, global_ptool_conc_months)
+#View(total)
+```
+
+pivot
+```{r}
+total1<-total%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+total1$month<-as.factor(total1$month)
+total1
+```
+
+
+# Calculate mean of concentration (not logged, not filtered) in the two groups
+```{r}
+#use plyr to calculate mean
+mu <- ddply(total1, "model", summarise, grp.mean=mean(concentrations))
+mu
+```
+
+# Calculate median of concentration (not logged, not filtered) in the two groups
+```{r}
+# use plyr to calculate median
+eta <- ddply(total1, "model", summarise, grp.median=median(concentrations))
+eta
+```
+
+
+#########################################################################
+
+## Compare predictions to actual monthly observations (months= columns of both df)
+# make a df of monthly TRP observations 
+```{r}
+monthly_observedTRP<-hydrology%>%
+  group_by(month)%>%
+  mutate(id = row_number())%>%
+  dplyr::select(-Date,-TRP..mg.l.,-day,-months,-year)%>%
+  pivot_wider(names_from = month, values_from = TRP,id_cols = id)%>%
+  dplyr::select(-id)
+
+monthly_observedTRP
+```
+
+# Merge two df: observations and predictions
+```{r}
+# add a column to identify what is what
+monthly_observedTRP$model<-as.factor("observations")
+global_ptool_conc_months$model<-as.factor("predictions")
+
+# use rbind to merge the two dfs in one
+total_months <- rbind(monthly_observedTRP, global_ptool_conc_months)
+total_months
+nrow(total_months)
+
+diffuseconcentrations_months$model<-as.factor("predictions")
+total_diffuse_months <- rbind(monthly_observedTRP, diffuseconcentrations_months)
+total_diffuse_months
+nrow(total_diffuse_months)
+```
+
+```{r}
+total_months1<-total_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+total_months1$month<-as.factor(total_months1$month)
+total_months1
+nrow(total_months1)
+
+total_diffuse_months1<-total_diffuse_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+total_diffuse_months1$month<-as.factor(total_diffuse_months1$month)
+total_diffuse_months1
+nrow(total_diffuse_months1)
+```
+
+
+# use plyr to calculate mean
+```{r}
+mu2 <- ddply(total_months1, "model", plyr::summarise, grp.mean=mean(concentrations, na.rm=T))
+mu2 #plyr::summarise or summarise is the same(?)
+```
+
+# use plyr to calculate median
+```{r}
+eta2 <- ddply(total_months1, "model", summarise, grp.median=median(concentrations,na.rm=T))
+eta2
+```
+
+# log10 of concentrations median or mean 
+```{r}
+mu_log10 <- ddply(total_months1, "model", summarise, grp.mean_log=mean(log10(concentrations), na.rm=T))
+eta_log10 <- ddply(total_months1, "model", summarise, grp.median_log=median(log10(concentrations), na.rm=T))
+
+mu_log10
+eta_log10
+```
+
+```{r}
+mu_diffuselog10 <- ddply(total_diffuse_months1, "model", summarise, grp.mean_log=mean(log10(concentrations), na.rm=T))
+eta_diffuselog10 <- ddply(total_diffuse_months1, "model", summarise, grp.median_log=median(log10(concentrations), na.rm=T))
+
+mu_diffuselog10
+eta_diffuselog10
+```

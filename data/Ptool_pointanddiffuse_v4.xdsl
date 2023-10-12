@@ -1,0 +1,684 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- This network was created in GeNIe Academic, which can be used for educational and research purposes only -->
+<smile version="1.0" id="ST_density" numsamples="10000" discsamples="10000">
+	<nodes>
+		<cpt id="month">
+			<state id="January" />
+			<state id="February" />
+			<state id="March" />
+			<state id="April" />
+			<state id="May" />
+			<state id="June" />
+			<state id="July" />
+			<state id="August" />
+			<state id="September" />
+			<state id="October" />
+			<state id="November" />
+			<state id="December" />
+			<probabilities>0.08493150684931507 0.07671232876712329 0.08493150684931507 0.0821917808219178 0.08493150684931507 0.0821917808219178 0.08493150684931507 0.08493150684931507 0.0821917808219178 0.08493150684931507 0.0821917808219178 0.08493150684931507</probabilities>
+		</cpt>
+		<cpt id="Landuse_type">
+			<state id="Arable" />
+			<state id="Grassland" />
+			<state id="Seminatural" />
+			<probabilities>0.2 0.78 0.02</probabilities>
+		</cpt>
+		<equation id="Mean_monthly_runoff">
+			<parents>month</parents>
+			<definition lower="0" upper="1124380">Mean_monthly_runoff=Choose(month,Lognormal(13.8,0.17),Lognormal(13.5,0.18),Lognormal(12.9,0.17),Lognormal(12.5,0.19),Lognormal(12.2,0.21),Lognormal(11.8,0.3),Lognormal(11.3,0.32),Lognormal(11.8,0.5),Lognormal(11.5,0.36),Lognormal(12.8,0.4),Lognormal(13.7,0.21),Lognormal(13.8,0.21))</definition>
+			<discretization>
+				<interval label="Very_low" upper="109424" />
+				<interval label="Low" upper="227082" />
+				<interval label="Medium" upper="373942" />
+				<interval label="High" upper="806788" />
+				<interval label="Very_high" upper="1124380" />
+			</discretization>
+		</equation>
+		<equation id="monthlyNTU">
+			<parents>month</parents>
+			<definition lower="0" upper="4344">monthlyNTU=Choose(month,Lognormal(6.3,0.25),Lognormal(6,0.23),Lognormal(5.6,0.23),Lognormal(5.5,0.2),Lognormal(5.3,0.15),Lognormal(5.5,0.15),Lognormal(5.2,0.13),Lognormal(5.2,0.13),Lognormal(5.2,0.12),Lognormal(5.7,0.24),Lognormal(6.2,0.3),Lognormal(6.2,0.3))</definition>
+			<discretization>
+				<interval label="Very_Low" upper="1402" />
+				<interval label="Low" upper="1665" />
+				<interval label="Medium" upper="2270" />
+				<interval label="High" upper="3391" />
+				<interval label="Very_High" upper="4344" />
+			</discretization>
+		</equation>
+		<cpt id="Morgan_P">
+			<state id="Morgan1" />
+			<state id="Morgan2" />
+			<state id="Morgan3" />
+			<state id="Morgan4" />
+			<parents>Landuse_type</parents>
+			<probabilities>0.395 0.49 0.095 0.02 0.46 0.35 0.14 0.05 0 0.6 0.3 0.1</probabilities>
+		</cpt>
+		<cpt id="Buffers">
+			<state id="Two_metre" />
+			<state id="Two_metre_plus" />
+			<state id="none" />
+			<parents>Landuse_type</parents>
+			<probabilities>0.98 0.019 0.001 0.1 0.1 0.8 1.01e-06 1.01e-06 0.99999798</probabilities>
+		</cpt>
+		<equation id="baseflow_plus_elevated_baseflow">
+			<parents>Mean_monthly_runoff</parents>
+			<definition lower="0" upper="629653">baseflow_plus_elevated_baseflow=Mean_monthly_runoff*0.56</definition>
+			<discretization>
+				<interval label="Very_low" upper="7.32" />
+				<interval label="Low" upper="11.87" />
+				<interval label="Medium" upper="24.55" />
+				<interval label="High" upper="48" />
+				<interval label="Very_high" upper="629653" />
+			</discretization>
+		</equation>
+		<equation id="WEP">
+			<parents>Morgan_P Landuse_type</parents>
+			<definition lower="0" upper="15">WEP=Choose(Morgan_P,Choose(Landuse_type,0.45*Uniform(0,3)+0.19,0.6*Uniform(0,3)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(3.1,6)+0.19,0.6*Uniform(3.1,5)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(6.1,10)+0.19,0.6*Uniform(5.1,8)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(10,30)+0.19,0.6*Uniform(8.1,30)+1.46,0.001))</definition>
+			<discretization>
+				<interval label="Low" upper="3" />
+				<interval label="Medium" upper="5" />
+				<interval label="High" upper="8" />
+				<interval label="Very_High" upper="15" />
+			</discretization>
+			<property id="literature">Thomas, I.A., Mellander, P.-E., Murphy, P.N.C., Fenton, O., Shine, O., Djodjic, F., Dunlop, P., Jordan, P., 2016. A sub-field scale critical source area index for legacy phosphorus management using high resolution data. Agriculture, Ecosystems &amp; Environment 233, 238–252. https://doi.org/10.1016/j.agee.2016.09.012\n</property>
+		</equation>
+		<equation id="Surface_runoff">
+			<parents>Mean_monthly_runoff</parents>
+			<definition lower="0" upper="487635">Surface_runoff=Mean_monthly_runoff*0.26</definition>
+			<discretization>
+				<interval label="Very_low" upper="2.7" />
+				<interval label="Low" upper="4.5" />
+				<interval label="Medium" upper="9.65" />
+				<interval label="High" upper="14.4" />
+				<interval label="Very_high" upper="487635" />
+			</discretization>
+		</equation>
+		<equation id="WSP">
+			<definition lower="0" upper="100">WSP=Lognormal(-0.9,1)</definition>
+			<discretization>
+				<interval label="Very_Low" upper="14.8" />
+				<interval label="Low" upper="27.3" />
+				<interval label="Medium" upper="35.8" />
+				<interval label="High" upper="44.9" />
+				<interval label="Very_High" upper="100" />
+			</discretization>
+			<property id="literature">Thomas, I.A., Mellander, P.-E., Murphy, P.N.C., Fenton, O., Shine, O., Djodjic, F., Dunlop, P., Jordan, P., 2016. A sub-field scale critical source area index for legacy phosphorus management using high resolution data. Agriculture, Ecosystems &amp; Environment 233, 238–252. https://doi.org/10.1016/j.agee.2016.09.012\n</property>
+		</equation>
+		<equation id="Subsurface_stormflow">
+			<parents>Mean_monthly_runoff</parents>
+			<definition lower="0" upper="202388">Subsurface_stormflow=Mean_monthly_runoff*0.18</definition>
+			<discretization>
+				<interval label="Very_low" upper="19696" />
+				<interval label="Low" upper="40875" />
+				<interval label="Medium" upper="67309" />
+				<interval label="High" upper="145222" />
+				<interval label="Very_high" upper="202388" />
+			</discretization>
+		</equation>
+		<equation id="Predicted_dissolved_P">
+			<parents>WEP</parents>
+			<definition lower="0" upper="15">Predicted_dissolved_P=If(0.08*WEP-0.158&lt;0,0,0.08*WEP-0.158)</definition>
+			<discretization>
+				<interval label="Low" upper="3" />
+				<interval label="Medium" upper="5" />
+				<interval label="High" upper="8" />
+				<interval label="Very_High" upper="15" />
+			</discretization>
+			<property id="literature">Thomas, I.A., Mellander, P.-E., Murphy, P.N.C., Fenton, O., Shine, O., Djodjic, F., Dunlop, P., Jordan, P., 2016. A sub-field scale critical source area index for legacy phosphorus management using high resolution data. Agriculture, Ecosystems &amp; Environment 233, 238–252. https://doi.org/10.1016/j.agee.2016.09.012\n</property>
+		</equation>
+		<equation id="Dissolved_load">
+			<parents>Subsurface_stormflow Predicted_dissolved_P</parents>
+			<definition lower="0" upper="200">Dissolved_load=Subsurface_stormflow*Predicted_dissolved_P/1000</definition>
+			<discretization>
+				<interval label="Low" upper="3" />
+				<interval label="High" upper="200" />
+			</discretization>
+		</equation>
+		<equation id="Buffer_effectiveness_for_TDP">
+			<parents>Buffers</parents>
+			<definition lower="0" upper="1">Buffer_effectiveness_for_TDP=Choose(Buffers,Beta(1.8,2.7),Beta(1,0.8),0)</definition>
+			<discretization>
+				<interval label="very_low" upper="0.2" />
+				<interval label="low" upper="0.4" />
+				<interval label="medium" upper="0.6" />
+				<interval label="high" upper="0.8" />
+				<interval label="very_high" upper="1" />
+			</discretization>
+		</equation>
+		<equation id="Modified_DissolvedP_load">
+			<parents>Dissolved_load Buffer_effectiveness_for_TDP</parents>
+			<definition lower="0" upper="200">Modified_DissolvedP_load=(1-Buffer_effectiveness_for_TDP)*Dissolved_load</definition>
+			<discretization>
+				<interval label="Low" upper="3" />
+				<interval label="High" upper="200" />
+			</discretization>
+		</equation>
+		<equation id="sed_conc">
+			<parents>monthlyNTU</parents>
+			<definition lower="0" upper="480">sed_conc=0.567*monthlyNTU^1.1109</definition>
+			<discretization>
+				<interval label="Very_Low" upper="133.3" />
+				<interval label="Low" upper="165" />
+				<interval label="Medium" upper="237.6" />
+				<interval label="High" upper="369.3" />
+				<interval label="Very_High" upper="480" />
+			</discretization>
+			<property id="notes">in WISKI for  Suspended Sediment  for ballycanew the equation is  (ts1.value ^ 1.1109) * 0.567  where t1=turbidity.  The unit for Suspended Sediment   = mg/l</property>
+			<property id="monthly_mean_WISKI">269.15</property>
+		</equation>
+		<equation id="sediment_p_load">
+			<parents>sed_conc Surface_runoff WSP</parents>
+			<definition lower="0" upper="200">sediment_p_load=WSP/10^6*(Surface_runoff*sed_conc/1000)</definition>
+			<discretization>
+				<interval label="Low" upper="3" />
+				<interval label="High" upper="200" />
+			</discretization>
+		</equation>
+		<equation id="Buffer_effectiveness_for_SSandPP">
+			<parents>Buffers</parents>
+			<definition lower="0" upper="1">Buffer_effectiveness_for_SSandPP=Choose(Buffers,Beta(2.9,4.5),Beta(1.44,0.789),0)</definition>
+			<discretization>
+				<interval label="very_low" upper="0.2" />
+				<interval label="low" upper="0.4" />
+				<interval label="medium" upper="0.6" />
+				<interval label="high" upper="0.8" />
+				<interval label="very_high" upper="1" />
+			</discretization>
+		</equation>
+		<equation id="modified_sediment_P_kg">
+			<parents>sediment_p_load Buffer_effectiveness_for_SSandPP</parents>
+			<definition lower="0" upper="200">modified_sediment_P_kg=sediment_p_load*(1-Buffer_effectiveness_for_SSandPP)</definition>
+			<discretization>
+				<interval label="Low" upper="3" />
+				<interval label="High" upper="200" />
+			</discretization>
+		</equation>
+		<equation id="PconcentrationFY">
+			<definition lower="0" upper="60">PconcentrationFY=Lognormal(-1.8,1.6)</definition>
+			<discretization>
+				<interval label="absent" upper="0.01" />
+				<interval label="low" upper="0.5" />
+				<interval label="medium" upper="1" />
+				<interval label="high" upper="2.5" />
+				<interval label="very_high" upper="60" />
+			</discretization>
+			<property id="Note">SRP concentration in FY drains from Harrison et al, 2019. TP could be higher according to other papers. Why I did not use Moloney or Ezzati: dilution problem of other experiments set ups. </property>
+		</equation>
+		<equation id="FYsizeArea">
+			<definition lower="0" upper="4500">FYsizeArea=Lognormal(5.6,0.98)</definition>
+			<discretization>
+				<interval label="very_low" upper="56" />
+				<interval label="low" upper="127" />
+				<interval label="medium" upper="277" />
+				<interval label="high" upper="586" />
+				<interval label="very_high" upper="4500" />
+			</discretization>
+		</equation>
+		<equation id="Incidental_losses_perFY">
+			<parents>PconcentrationFY FYsizeArea Surface_runoff</parents>
+			<definition lower="0" upper="60">Incidental_losses_perFY=Surface_runoff/(1207*10000)*FYsizeArea*PconcentrationFY/10^3</definition>
+			<discretization>
+				<interval label="absent" upper="1e-09" />
+				<interval label="low" upper="0.001" />
+				<interval label="medium" upper="0.01" />
+				<interval label="high" upper="0.1" />
+				<interval label="very_high" upper="60" />
+			</discretization>
+		</equation>
+		<equation id="Total_Incidental_losses_Tmonth">
+			<parents>Incidental_losses_perFY</parents>
+			<definition lower="0" upper="10">Total_Incidental_losses_Tmonth=Incidental_losses_perFY*70/1000</definition>
+			<discretization>
+				<interval label="absent" upper="1e-05" />
+				<interval label="low" upper="0.007" />
+				<interval label="medium" upper="0.07000000000000001" />
+				<interval label="high" upper="0.7" />
+				<interval label="very_high" upper="10" />
+			</discretization>
+		</equation>
+		<cpt id="Ballycanew_ST_risk_classes">
+			<state id="very_low" />
+			<state id="low" />
+			<state id="medium" />
+			<state id="high" />
+			<state id="very_high" />
+			<probabilities>9.999800002999961e-06 0.3749925001124985 9.999900000999991e-06 0.6189876201856974 0.005999880001800184</probabilities>
+		</cpt>
+		<cpt id="BallycanewPSaturation100">
+			<state id="Very_Low_0_20" />
+			<state id="Low_20_40" />
+			<state id="Medium_40_60" />
+			<probabilities>0.978 0.017 0.005000000000000018</probabilities>
+		</cpt>
+		<cpt id="leachfield_removal">
+			<state id="low" />
+			<state id="medium" />
+			<state id="high" />
+			<parents>Ballycanew_ST_risk_classes BallycanewPSaturation100</parents>
+			<probabilities>0 0 1 0 0.5 0.5 0.5 0.5 0 0 0.3 0.7 0 0.7 0.3 0.3 0.7 0 0 0.5 0.5 0 1 0 0.5 0.5 0 0 0.7 0.3 0.3 0.7 0 0.7 0.3 0 0 0.5 0.5 0.5 0.5 0 1 0 0</probabilities>
+		</cpt>
+		<cpt id="Connectivity_rescaled_HSA">
+			<state id="none_0" />
+			<state id="low_1_3" />
+			<state id="medium_4_7" />
+			<state id="high_8_10" />
+			<probabilities>0.6 0.18 0.2 0.02</probabilities>
+		</cpt>
+		<cpt id="Directdischarge">
+			<state id="present" />
+			<state id="absent" />
+			<probabilities>0.14 0.86</probabilities>
+		</cpt>
+		<cpt id="leachfield_connectedness">
+			<state id="low" />
+			<state id="medium" />
+			<state id="high" />
+			<parents>Connectivity_rescaled_HSA Directdischarge</parents>
+			<probabilities>0 0 1 1 0 0 0 0 1 1 0 0 0 0 1 0 1 0 0 0 1 0 0 1</probabilities>
+		</cpt>
+		<cpt id="ST_Connectedness">
+			<state id="low" />
+			<state id="medium" />
+			<state id="high" />
+			<parents>leachfield_removal leachfield_connectedness</parents>
+			<probabilities>1 0 0 0 1 0 0 0 1 1 0 0 0 1 0 0 0.5 0.5 1 0 0 0.5 0.5 0 0 1 0</probabilities>
+		</cpt>
+		<cpt id="treatment">
+			<state id="Unknown" />
+			<state id="Primary" />
+			<state id="Secondary" />
+			<probabilities>0.5 0.31 0.19</probabilities>
+			<property id="Notes">Waterprotect project</property>
+		</cpt>
+		<equation id="P_Concentration_pertank">
+			<parents>treatment</parents>
+			<definition lower="0" upper="100">P_Concentration_pertank=Choose(treatment,Lognormal(2.9,1.25),TruncNormal(10,1,0),TruncNormal(5,0.5,0))</definition>
+			<discretization>
+				<interval label="absent" upper="1e-08" />
+				<interval label="low" upper="1" />
+				<interval label="medium" upper="18" />
+				<interval label="high" upper="35" />
+				<interval label="very_high" upper="100" />
+			</discretization>
+		</equation>
+		<equation id="STLoad_kgmonth">
+			<parents>P_Concentration_pertank</parents>
+			<definition lower="0" upper="30">STLoad_kgmonth=120*2.7*(365/12)*(P_Concentration_pertank/1e+06)</definition>
+			<discretization>
+				<interval label="absent" upper="1e-06" />
+				<interval label="very_low" upper="0.1" />
+				<interval label="low" upper="0.5" />
+				<interval label="medium" upper="1" />
+				<interval label="high" upper="2" />
+				<interval label="very_high" upper="30" />
+			</discretization>
+		</equation>
+		<equation id="Total_RealisedSTloadTmonth">
+			<parents>ST_Connectedness STLoad_kgmonth</parents>
+			<definition lower="0" upper="12">Total_RealisedSTloadTmonth=Choose(ST_Connectedness,STLoad_kgmonth*0.05,STLoad_kgmonth*0.3,STLoad_kgmonth*0.8)*88/1000</definition>
+			<discretization>
+				<interval label="very_low" upper="0.1" />
+				<interval label="low" upper="0.5" />
+				<interval label="medium" upper="1" />
+				<interval label="high" upper="2" />
+				<interval label="very_high" upper="12" />
+			</discretization>
+		</equation>
+		<equation id="Baseflow_Dissolved_load">
+			<parents>baseflow_plus_elevated_baseflow Predicted_dissolved_P</parents>
+			<definition lower="0" upper="200">Baseflow_Dissolved_load=baseflow_plus_elevated_baseflow*Predicted_dissolved_P/1000</definition>
+			<discretization>
+				<interval label="Low" upper="3" />
+				<interval label="High" upper="200" />
+			</discretization>
+		</equation>
+		<equation id="total_catchment_load">
+			<parents>modified_sediment_P_kg Modified_DissolvedP_load Total_Incidental_losses_Tmonth Baseflow_Dissolved_load Total_RealisedSTloadTmonth</parents>
+			<definition lower="0" upper="10">total_catchment_load=(modified_sediment_P_kg+Modified_DissolvedP_load+Baseflow_Dissolved_load)/1000+Total_RealisedSTloadTmonth+Total_Incidental_losses_Tmonth</definition>
+			<discretization>
+				<interval label="Low" upper="0.02" />
+				<interval label="Medium" upper="1" />
+				<interval label="High" upper="10" />
+			</discretization>
+		</equation>
+		<equation id="PConcentration">
+			<parents>total_catchment_load Mean_monthly_runoff</parents>
+			<definition lower="0" upper="10">PConcentration=10^9*total_catchment_load/(Mean_monthly_runoff*1000)</definition>
+			<discretization>
+				<interval label="Moderate" upper="0.035" />
+				<interval label="Bad" upper="10" />
+			</discretization>
+		</equation>
+		<equation id="Copy_of_PConcentration">
+			<parents>PConcentration</parents>
+			<definition lower="0.01" upper="5">Copy_of_PConcentration=If(PConcentration&lt;=0.01,0.01,PConcentration)</definition>
+			<discretization>
+				<interval label="Moderate" upper="0.035" />
+				<interval label="Bad" upper="5" />
+			</discretization>
+		</equation>
+		<cpt id="Discrete_TRPConcentration">
+			<state id="Good" />
+			<state id="Bad" />
+			<parents>Copy_of_PConcentration</parents>
+			<probabilities>1 0 0 1</probabilities>
+		</cpt>
+	</nodes>
+	<extensions>
+		<genie version="1.0" app="GeNIe 2.4.4420.0 ACADEMIC" name="ST density" faultnameformat="nodestate">
+			<node id="Morgan_P">
+				<name>Morgan P</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>155 254 296 321</position>
+				<barchart active="true" width="338" height="157" />
+			</node>
+			<node id="WEP">
+				<name>Water Extractable P (WEP) mg L-1</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>157 425 289 506</position>
+				<barchart active="true" width="335" height="157" />
+			</node>
+			<node id="Dissolved_load">
+				<name>Sub-surface Dissolved P load kg</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>175 885 304 959</position>
+				<barchart active="true" width="275" height="168" />
+			</node>
+			<node id="Modified_DissolvedP_load">
+				<name>Modified Dissolved P load kg</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>183 1326 330 1397</position>
+				<barchart active="true" width="272" height="160" />
+			</node>
+			<node id="Buffers">
+				<name>Buffers</name>
+				<interior color="ff6600" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>489 104 590 153</position>
+				<barchart active="true" width="215" height="110" />
+			</node>
+			<node id="Landuse_type">
+				<name>landuse</name>
+				<interior color="ff6600" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>236 100 354 155</position>
+				<comment>I think we need more options including some mosaics</comment>
+				<barchart active="true" width="214" height="115" />
+			</node>
+			<node id="month">
+				<name>Month</name>
+				<interior color="33cccd" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1055 176 1162 244</position>
+				<barchart active="true" width="242" height="369" />
+			</node>
+			<node id="Surface_runoff">
+				<name>Mean total monthly surface flowm3</name>
+				<interior color="33cccd" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>570 686 748 781</position>
+				<barchart active="true" width="393" height="151" />
+			</node>
+			<node id="baseflow_plus_elevated_baseflow">
+				<name>Mean total monthly baseflow m3</name>
+				<interior color="33cccd" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1384 692 1542 784</position>
+				<barchart active="true" width="370" height="152" />
+			</node>
+			<node id="Mean_monthly_runoff">
+				<name>Mean total monthly Q (discharge) cumecs</name>
+				<interior color="33cccd" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1016 471 1182 549</position>
+				<barchart active="true" width="450" height="155" />
+			</node>
+			<node id="PConcentration">
+				<name>In stream TRP concentration mg L-1</name>
+				<interior color="99ccff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>787 1526 939 1610</position>
+				<barchart active="true" width="342" height="138" />
+			</node>
+			<node id="total_catchment_load">
+				<name>Total catchment in stream P load T month-1 </name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>777 1329 910 1415</position>
+				<barchart active="true" width="290" height="191" />
+			</node>
+			<node id="monthlyNTU">
+				<name>Monthly Turbidity (NTU)</name>
+				<interior color="e5f6f7" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="14" bold="true" />
+				<position>1380 105 1647 276</position>
+				<barchart active="true" width="313" height="192" />
+			</node>
+			<node id="sediment_p_load">
+				<name> monthly sediment P load kg month-1</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="14" bold="true" />
+				<position>754 1009 1021 1180</position>
+				<barchart active="true" width="270" height="194" />
+			</node>
+			<node id="PconcentrationFY">
+				<name>FYconcentration mg L-1</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2025 637 2230 710</position>
+				<barchart active="true" width="229" height="138" />
+			</node>
+			<node id="FYsizeArea">
+				<name>Farmyard size area m2</name>
+				<interior color="ff6600" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1722 641 1927 714</position>
+				<barchart active="true" width="267" height="138" />
+			</node>
+			<node id="Incidental_losses_perFY">
+				<name>Incidental losses per avg yard kg month-1</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1783 878 1942 962</position>
+				<barchart active="true" width="260" height="195" />
+			</node>
+			<node id="Total_Incidental_losses_Tmonth">
+				<name>Total Incidental losses T month-1</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1335 1105 1494 1189</position>
+				<barchart active="true" width="260" height="195" />
+			</node>
+			<node id="Directdischarge">
+				<name>Direct discharge</name>
+				<interior color="ff6600" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2485 1121 2601 1175</position>
+				<barchart active="true" width="277" height="115" />
+			</node>
+			<node id="ST_Connectedness">
+				<name>ST_connectedness</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1811 1195 1945 1264</position>
+				<barchart active="true" width="290" height="131" />
+			</node>
+			<node id="leachfield_removal">
+				<name>leachfield removal</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2118 1039 2237 1121</position>
+				<barchart active="true" width="291" height="113" />
+			</node>
+			<node id="BallycanewPSaturation100">
+				<name>DPS</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2148 903 2234 956</position>
+				<barchart active="true" width="292" height="110" />
+			</node>
+			<node id="leachfield_connectedness">
+				<name>leachfield connectedness</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2111 1207 2292 1274</position>
+				<barchart active="true" width="280" height="132" />
+			</node>
+			<node id="Ballycanew_ST_risk_classes">
+				<name>soil risk factor</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2464 897 2589 961</position>
+				<barchart active="true" width="281" height="150" />
+			</node>
+			<node id="P_Concentration_pertank">
+				<name>P concentration mg L-1 per tank</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2122 1397 2247 1468</position>
+				<barchart active="true" width="310" height="165" />
+			</node>
+			<node id="STLoad_kgmonth">
+				<name>Load per tank kg month-1</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1837 1404 1918 1456</position>
+				<barchart active="true" width="256" height="189" />
+			</node>
+			<node id="Total_RealisedSTloadTmonth">
+				<name>Realised total load T month-1</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1359 1327 1473 1381</position>
+				<barchart active="true" width="264" height="195" />
+			</node>
+			<node id="Connectivity_rescaled_HSA">
+				<name>Connectivity rescaled HSA</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2488 1252 2583 1324</position>
+				<barchart active="true" width="286" height="115" />
+			</node>
+			<node id="treatment">
+				<name>Treatment</name>
+				<interior color="ff6600" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>2489 1395 2605 1449</position>
+				<barchart active="true" width="320" height="115" />
+			</node>
+			<node id="sed_conc">
+				<name>Monthly Suspended Sediment Concentration mg L-1</name>
+				<interior color="e5f6f7" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="14" bold="true" />
+				<position>1380 372 1647 543</position>
+				<barchart active="true" width="313" height="192" />
+			</node>
+			<node id="Buffer_effectiveness_for_SSandPP">
+				<name>Buffer effectiveness for SSandPP</name>
+				<interior color="ff6600" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>533 243 705 324</position>
+				<barchart active="true" width="334" height="138" />
+			</node>
+			<node id="Buffer_effectiveness_for_TDP">
+				<name>Buffer effectiveness for TDP</name>
+				<interior color="ff6600" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>535 403 693 487</position>
+				<barchart active="true" width="331" height="141" />
+			</node>
+			<node id="modified_sediment_P_kg">
+				<name>Modified Sediment P load kg</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>312 1092 635 1240</position>
+				<barchart active="true" width="271" height="166" />
+			</node>
+			<node id="Subsurface_stormflow">
+				<name>Mean total monthly sub-surface stormflow m3</name>
+				<interior color="33cccd" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>978 686 1156 781</position>
+				<barchart active="true" width="393" height="151" />
+			</node>
+			<node id="WSP">
+				<name>Sediment WSP  mg kg-1</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1156 909 1288 990</position>
+				<barchart active="true" width="281" height="156" />
+			</node>
+			<node id="Baseflow_Dissolved_load">
+				<name>Baseflow Dissolved P load kg</name>
+				<interior color="cc99ff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>520 895 649 969</position>
+				<barchart active="true" width="271" height="174" />
+			</node>
+			<node id="Predicted_dissolved_P">
+				<name>Predicted Dissolved P Concentration mg L-1</name>
+				<interior color="ffcc00" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>158 634 290 715</position>
+				<barchart active="true" width="338" height="149" />
+			</node>
+			<node id="Copy_of_PConcentration">
+				<name>Copy of In stream TRP concentration mg L-1</name>
+				<interior color="99ccff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>785 1698 937 1782</position>
+				<barchart active="true" width="342" height="138" />
+			</node>
+			<node id="Discrete_TRPConcentration">
+				<name>EQS (TRPconcentration mg L-1)</name>
+				<interior color="99ccff" />
+				<outline color="000080" />
+				<font color="000000" name="Arial" size="12" bold="true" />
+				<position>1161 1694 1313 1778</position>
+				<barchart active="true" width="342" height="138" />
+			</node>
+		</genie>
+	</extensions>
+</smile>

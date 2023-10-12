@@ -1,0 +1,207 @@
+---
+title: "DischargeDistributions"
+author: "Camilla Negri"
+date: "16/11/2022"
+output:
+---
+## Discharge Distributions
+
+A notebook to fit monthly Q (discharge) distributions to daily data in order to take advantage of the high resolution dataset, hopefully this means the discharge predictions of the BBN can become more accurate.
+Purpose is bootstrapping daily Q and fit monthly lognormal distributions.
+
+# Loading the data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plyr)
+library(dplyr)  
+library(lubridate)
+library(lme4)
+library(tidyverse)
+library(fitdistrplus)
+
+hydrology<-read.csv("data/Ballycanew_discharge.csv")
+```
+
+Now lets load the daily data 1 October 2009 - 31 December 2016
+Qcumecs = total daily discharge [cubic meters]
+
+# Loading summary data
+```{r}
+names(hydrology)[names(hydrology) == 'ï..Date'] <- 'Date'
+summary(hydrology)
+quantile(hydrology$Qcumecs, na.rm=T,probs=c(0.05,0.25,0.5,0.75,0.95,1))
+```
+
+# Parsing the data by month
+```{r parsing_data}
+hydrology$Date<- parse_date_time(hydrology$Date, "d/m/Y")
+
+hydrology$day <- yday(hydrology$Date)
+hydrology$months <- month(hydrology$Date)
+hydrology$year <- year(hydrology$Date)
+
+# assign months
+hydrology$month<-NA # new blank column
+hydrology$month[hydrology$months %in% c(1)]<-"January"
+hydrology$month[hydrology$months %in% c(2)]<-"February"
+hydrology$month[hydrology$months %in% c(3)]<-"March"
+hydrology$month[hydrology$months %in% c(4)]<-"April"
+hydrology$month[hydrology$months %in% c(5)]<-"May"
+hydrology$month[hydrology$months %in% c(6)]<-"June"
+hydrology$month[hydrology$months %in% c(7)]<-"July"
+hydrology$month[hydrology$months %in% c(8)]<-"August"
+hydrology$month[hydrology$months %in% c(9)]<-"September"
+hydrology$month[hydrology$months %in% c(10)]<-"October"
+hydrology$month[hydrology$months %in% c(11)]<-"November"
+hydrology$month[hydrology$months %in% c(12)]<-"December"
+
+# %in% value matching = returns a vector of the positions of (first) matches of its first argument in its second
+
+hydrology$month <- factor(hydrology$month, levels=month.name) 
+# encodes a vector as a factor
+apply(hydrology, 2, function(x) any(is.na(x)))
+```
+
+Now the daily hydrology dataset can be filtered by month
+```{r}
+hydrology_Qcumecs<-
+  hydrology%>%
+  dplyr::select(month, Qcumecs)
+
+# check if any NAs 
+apply(hydrology_Qcumecs, 2, function(x) any(is.na(x)))
+hydrology_Qcumecs
+```
+
+Now months as columns, Q cumecs as values 
+```{r}
+hydrology_Qcumecs<-hydrology_Qcumecs %>%
+  group_by(month) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = month, values_from = Qcumecs)%>%
+  dplyr::select(-row)
+
+hydrology_Qcumecs
+```
+
+This gets me a tibble, which plotdist really does not like, using `pull()` might be the solution
+```{r}
+as.data.frame(hydrology_Qcumecs)
+daily_January<-pull(hydrology_Qcumecs,January)
+```
+
+# distribution of daily Q in January
+```{r}
+plotdist(c(na.exclude(daily_January)), histo = TRUE, demp = TRUE) # using c(na.exclude()) to get rid of "Error in density.default(data) : 'x' contains missing values" and get CDF
+```
+which definitely looks like a Lognormal (as expected).
+
+# Use `fitdist` from `fitdistrplus` to fit the Lognormal
+```{r}
+Jan_lognormal <- fitdist(daily_January[!is.na(daily_January)], "lnorm") # both !is.na and na.exclude still produce the warning 
+summary(Jan_lognormal) # gives std errors too
+```
+Jan_lognormal$estimate[1] #extracts the mean
+Jan_lognormal$estimate[2] #extracts the sd
+
+# Draw a random lognormal with `rlnorm`
+```{r}
+set.seed(666)
+sum(rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])) # sum of the randomly drawn lognormal, this means I have a total monthly Q 
+```
+
+# Generate 1000 lognormals, sum the 30 days in each
+```{r}
+monthlyQ<-lapply(1:1000, function(i) sum(rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])))
+```
+
+# This would get mean and sd, no need to run every time
+```{r}
+# lapply(1:1000, function(i) {
+#     x <- rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])
+#     c(mean=mean(x), sd=sd(x))
+# })
+```
+
+# And this would return a matrix of means and sds, no need to run every time
+```{r}
+# do.call(rbind, lapply(1:1000, function(i) {
+#     x <- rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])
+#     c(mean=mean(x), sd=sd(x))
+# }))
+```
+
+# distribution of monthly Q in January
+```{r}
+vectorQ<-unlist(monthlyQ) #you have to unlist the list so it can be plotted
+plotdist(vectorQ, histo = TRUE, demp = TRUE)
+```
+
+# Use `fitdist` from `fitdistrplus` to fit the Lognormal
+```{r}
+Jan_monthly_lognormal <- fitdist(vectorQ, "lnorm") # natural log
+summary(Jan_monthly_lognormal)
+```
+
+-std is asymmetric in linear space but symmetric in logspace 
+-natural log is used by `fitdist`
+
+To transform lower and upper limits in linear space, for example: 2.71**(13.8-0.17), and 2.71**(13.8+0.17).
+
+Ok, since this worked with one column of my df, I am going to try to apply the same procedure to all the columns, in order to get a fitted distribution for each month
+
+# Write function to apply to all hydrology_Qcumecs columns, so to each month
+```{r}
+monthly_lognormal_estimates <- function(MYCOLUMN) {
+  daily_lognormal<-fitdist(MYCOLUMN[!is.na(MYCOLUMN)], "lnorm") #fit lnorm to daily data
+  monthlyQ<-lapply(1:1000, function(i) sum(rlnorm(n = 30, mean = daily_lognormal$estimate[1], sd = daily_lognormal$estimate[2]),na.rm = T)) # generate 1000 lnorm with the fitted params above, then sum the 30 datapoints in each lnorm so to cumulate days into months
+  vectorQ<-unlist(monthlyQ) # convert into vec which is what is needed in fitdist
+  monthly_lognormal<-fitdist(vectorQ[!is.na(vectorQ)], "lnorm") # fit monthly lnorm
+  return(monthly_lognormal$estimate) # return parameters
+} 
+```
+
+# Test this function is working with the already extracted January dataset
+```{r warning=F}
+monthly_lognormal_estimates(daily_January)
+```
+Looks like it works!
+
+# Apply function to all columns
+```{r warning=F}
+monthly_lnorm_params<-apply(hydrology_Qcumecs, 2, monthly_lognormal_estimates)
+```
+
+# make results more readable with a df
+```{r}
+# transpose and convert to dataframe
+monthly_lnorm_params<-as.data.frame(t(monthly_lnorm_params))
+
+# convert to base 10
+monthly_lnorm_params$meanlog10<-monthly_lnorm_params$meanlog/log(10)
+monthly_lnorm_params$sdlog10<-monthly_lnorm_params$sdlog/log(10)
+
+monthly_lnorm_params
+```
+
+```{r}
+write.csv(monthly_lnorm_params,"data/monthly_discharge_distributions.csv")
+```
+
+
+# sample for each month
+We can sample from the fitted lognormal 
+```{r}
+sampled_observedQ<-apply(monthly_lnorm_params, 1, function (i) rlnorm(10000, meanlog = monthly_lnorm_params$meanlog, sdlog = monthly_lnorm_params$sdlog))
+
+sampled_observedQ<-as.data.frame(sampled_observedQ)
+head(sampled_observedQ)
+```
+
+# Save csv
+```{r}
+write.csv(sampled_observedQ,"data/monthly_fitted_Q_observations_Ballycanew.csv" )
+```
+

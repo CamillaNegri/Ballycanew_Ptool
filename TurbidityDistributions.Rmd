@@ -1,0 +1,157 @@
+---
+title: "Turbidity Distributions"
+author: "Camilla Negri"
+date: "28/11/2022"
+---
+
+A notebook to fit distributions of monthly Turbidity (NTU) by bootstrapping daily NTU observations at catchment outlet (2009-2016).
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(tidyverse)
+library(fitdistrplus)
+
+turbidity<- read.csv("data/Ballycanew_Turbidity_Sediments.csv")
+colnames(turbidity)
+
+names(turbidity)[names(turbidity) == 'ï..Date'] <- 'Date'
+```
+
+In this turbidity dataset:
+
+- Turbidity[NTU] daily mean from data measured at catchment outlet. NTU is the standard accepted turbidity unit and it stands for Nephelometric Turbidity Units 	
+
+- Suspended Sediment[mg/l] sediment concentration derived from turbidity with calibration curve (methods are described in Sherriff, S., Rowan, J.S., Melland, A.R., Jordan, P., Fenton, O., Ó hUallacháin, D., 2015. Investigating suspended sediment dynamics in contrasting agricultural catchments using ex situ turbidity-based suspended sediment monitoring. Hydrology and Earth System Sciences 19, 3349–3363. https://doi.org/10.5194/hess-19-3349-2015)
+
+- SuspendedSedimentLoad[g]	sediment load is calculated by multiplying the daily sediment concentration by the discharge
+
+# Parsing data a monthly time step
+```{r parsing_data}
+turbidity$Date<- parse_date_time(turbidity$Date, "d/m/Y")
+
+turbidity$day <- yday(turbidity$Date)
+turbidity$months <- month(turbidity$Date)
+turbidity$year <- year(turbidity$Date)
+
+# assign months
+turbidity$month<-NA # new blank column
+turbidity$month[turbidity$months %in% c(1)]<-"January"
+turbidity$month[turbidity$months %in% c(2)]<-"February"
+turbidity$month[turbidity$months %in% c(3)]<-"March"
+turbidity$month[turbidity$months %in% c(4)]<-"April"
+turbidity$month[turbidity$months %in% c(5)]<-"May"
+turbidity$month[turbidity$months %in% c(6)]<-"June"
+turbidity$month[turbidity$months %in% c(7)]<-"July"
+turbidity$month[turbidity$months %in% c(8)]<-"August"
+turbidity$month[turbidity$months %in% c(9)]<-"September"
+turbidity$month[turbidity$months %in% c(10)]<-"October"
+turbidity$month[turbidity$months %in% c(11)]<-"November"
+turbidity$month[turbidity$months %in% c(12)]<-"December"
+
+# %in% value matching = returns a vector of the positions of (first) matches of its first argument in its second
+
+turbidity$month <- factor(turbidity$month, levels=month.name) 
+# encodes a vector as a factor
+
+summary(turbidity)
+```
+
+Now the daily dataset can be filtered by month
+```{r}
+turbidity1<-
+  turbidity%>%
+  dplyr::select(month, Turbidity.NTU.)
+```
+
+Now months as columns, NTU cumecs as values 
+```{r}
+turbidity1<-turbidity1 %>%
+  group_by(month) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = month, values_from = Turbidity.NTU.)%>%
+  dplyr::select(-row)
+```
+
+This gets me a tibble, which plotdist really does not like, using `pull()` might be the solution
+```{r}
+as.data.frame(turbidity1)
+daily_January<-pull(turbidity1,January)
+```
+
+# distribution of daily NTU in January
+```{r}
+plotdist(c(na.exclude(daily_January)), histo = TRUE, demp = TRUE) # using c(na.exclude()) to get rid of "Error in density.default(data) : 'x' contains missing values" and get CDF
+```
+
+Looks like a lognormal, as expected.
+
+# Use `fitdist` from `fitdistrplus` to fit the Lognormal
+```{r}
+Jan_lognormal <- fitdist(daily_January[!is.na(daily_January)], "lnorm") # both !is.na and na.exclude still produce the warning 
+summary(Jan_lognormal) # gives std errors too
+```
+
+# set seed
+```{r}
+set.seed(666)
+```
+
+# Draw a random lognormal with `rlnorm`
+```{r}
+sum(rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])) # sum of the randomly drawn lognormal, this means I have a total monthly NTU 
+```
+
+# Generate 1000 lognormals, sum the 30 days in each
+```{r}
+monthlyNTU<-lapply(1:1000, function(i) sum(rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])))
+```
+
+# distribution of monthly Q in January
+```{r}
+vectorNTU<-unlist(monthlyNTU) #you have to unlist the list so it can be plotted
+plotdist(vectorNTU, histo = TRUE, demp = TRUE)
+```
+
+# Use `fitdist` from `fitdistrplus` to fit the Lognormal
+```{r}
+Jan_monthly_lognormal <- fitdist(vectorNTU, "lnorm") # natural log
+summary(Jan_monthly_lognormal)
+```
+
+# Write function to apply to all turbidity1 columns, so to each month
+```{r}
+monthly_lognormal_estimates <- function(MYCOLUMN) {
+  daily_lognormal<-fitdist(MYCOLUMN[!is.na(MYCOLUMN)], "lnorm") #fit lnorm to daily data
+  monthlyNTU<-lapply(1:1000, function(i) sum(rlnorm(n = 30, mean = daily_lognormal$estimate[1], sd = daily_lognormal$estimate[2]),na.rm = T)) # generate 1000 lnorm with the fitted params above, then sum the 30 datapoints in each lnorm so to cumulate days into months
+  vectorNTU<-unlist(monthlyNTU) # convert into vec which is what is needed in fitdist
+  monthly_lognormal<-fitdist(vectorNTU[!is.na(vectorNTU)], "lnorm") # fit monthly lnorm
+  return(monthly_lognormal$estimate) # return parameters
+} 
+```
+
+# Apply function to all columns
+```{r warning=F}
+monthly_lnorm_params<-apply(turbidity1, 2, monthly_lognormal_estimates)
+```
+
+# make results more readable with a df
+```{r}
+# transpose and convert to dataframe
+monthly_lnorm_params<-as.data.frame(t(monthly_lnorm_params))
+
+# convert to base 10
+monthly_lnorm_params$meanlog10<-monthly_lnorm_params$meanlog/log(10)
+monthly_lnorm_params$sdlog10<-monthly_lnorm_params$sdlog/log(10)
+
+monthly_lnorm_params
+```
+
+```{r}
+write.csv(monthly_lnorm_params,"data/monthly_turbidity_distributions_Ballycanew.csv")
+```
