@@ -47,3 +47,9 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# R Environment Variables
+.Renviron
+
+# Rstudio project files
+*.Rproj
