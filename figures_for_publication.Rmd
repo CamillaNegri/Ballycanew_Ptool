@@ -1,0 +1,497 @@
+---
+title: "Results figures"
+author: "Camilla Negri"
+date: "04/09/2023"
+output: 
+---
+
+A notebook to make the results figures of the paper (Figure 3 and 4).
+
+# Libraries and set-up
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggpubr)
+library(lubridate)
+library(tidyverse)
+library(gghalves)
+library(scales)
+```
+
+# Load data and predictions
+```{r}
+# load observed data 
+hydrology<-read.csv("data/Ballycanew_data.csv")
+names(hydrology)[names(hydrology) == "ï..Date"]<- 'Date'
+
+# rename P columns
+hydrology$TRP<-hydrology$TRP..mg.l.
+head(hydrology)
+```
+
+```{r}
+global_ptool_conc_months<-read.csv("results/20230920_Ptool_v4_months.csv", header=T)
+names(global_ptool_conc_months)[names(global_ptool_conc_months) == 'ï..January']<- 'January'
+#head(global_ptool_conc) # this is Model B
+
+diffuseconcentrations_months<-read.csv("results/20230920_DiffusePtool_v4_months.csv", header=T)
+names(diffuseconcentrations_months)[names(diffuseconcentrations_months) == 'ï..January']<- 'January'
+
+#head(diffuseconcentrations_months) # this is Model A
+```
+
+```{r}
+# Overall Model A concentrations
+diffuseconcentrations<-read.csv("results/20230920_DiffusePtool_v4.csv", header=T)
+names(diffuseconcentrations)[names(diffuseconcentrations) == 'ï..Pconcentration_mgL']<- 'Pconcentration_mgL'
+
+# Overall Model B concentrations
+global_ptool_conc<-read.csv("results/20230920_Ptool_v4.csv", header=T)
+names(global_ptool_conc)[names(global_ptool_conc) == "PconcentrationmgL"]<- 'Pconcentration_mgL'
+```
+
+```{r}
+lognormal_observed_TRP <-read.csv("data/lognormal_observed_TRP.csv", header=T)
+lognormal_observed_TRP<-subset(lognormal_observed_TRP, select = -1)
+head(lognormal_observed_TRP) # this is the lognormal distribution fitted to the observations which is created and saved in the Genie_Results.Rmd file and is used to compare distributions
+```
+
+# Parsing data a monthly time step
+```{r parsing_data}
+hydrology$Date<- parse_date_time(hydrology$Date, "d/m/Y")
+
+hydrology$day <- yday(hydrology$Date)
+hydrology$months <- month(hydrology$Date)
+hydrology$year <- year(hydrology$Date)
+
+# assign months
+hydrology$month<-NA # new blank column
+hydrology$month[hydrology$months %in% c(1)]<-"January"
+hydrology$month[hydrology$months %in% c(2)]<-"February"
+hydrology$month[hydrology$months %in% c(3)]<-"March"
+hydrology$month[hydrology$months %in% c(4)]<-"April"
+hydrology$month[hydrology$months %in% c(5)]<-"May"
+hydrology$month[hydrology$months %in% c(6)]<-"June"
+hydrology$month[hydrology$months %in% c(7)]<-"July"
+hydrology$month[hydrology$months %in% c(8)]<-"August"
+hydrology$month[hydrology$months %in% c(9)]<-"September"
+hydrology$month[hydrology$months %in% c(10)]<-"October"
+hydrology$month[hydrology$months %in% c(11)]<-"November"
+hydrology$month[hydrology$months %in% c(12)]<-"December"
+
+# %in% value matching = returns a vector of the positions of (first) matches of its first argument in its second
+
+hydrology$month <- factor(hydrology$month, levels=month.name) 
+# encodes a vector as a factor
+head(hydrology)
+```
+
+# make a df of monthly TRP observations 
+```{r}
+monthly_observedTRP<-hydrology%>%
+  group_by(month)%>%
+  mutate(id = row_number())%>%
+  dplyr::select(-Date,-TRP..mg.l.,-day,-months,-year)%>%
+  pivot_wider(names_from = month, values_from = TRP,id_cols = id)%>%
+  dplyr::select(-id)
+
+head(monthly_observedTRP)
+```
+
+Observations
+```{r}
+monthly_observedTRP1<-monthly_observedTRP%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+monthly_observedTRP1$month<-as.factor(monthly_observedTRP1$month)
+head(monthly_observedTRP1)
+```
+
+Model B
+```{r}
+global_ptool_conc_months1<-global_ptool_conc_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+global_ptool_conc_months1$month<-as.factor(global_ptool_conc_months1$month)
+head(global_ptool_conc_months1)
+```
+
+Model A 
+```{r}
+diffuseconcentrations_months1<-diffuseconcentrations_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+diffuseconcentrations_months1$month<-as.factor(diffuseconcentrations_months1$month)
+head(diffuseconcentrations_months1)
+```
+
+Make sure the order of months is correct with mutate:
+```{r}
+global_ptool_conc_months1 <- global_ptool_conc_months1 %>% 
+  mutate(month=factor(month)) %>% 
+  mutate(month=fct_relevel(month,c("January","February","March","April","May","June","July","August","September","October","November","December"))) %>%
+ arrange(month)
+
+diffuseconcentrations_months1 <- diffuseconcentrations_months1 %>% 
+  mutate(month=factor(month)) %>% 
+  mutate(month=fct_relevel(month,c("January","February","March","April","May","June","July","August","September","October","November","December"))) %>%
+ arrange(month)
+
+monthly_observedTRP1 <- monthly_observedTRP1 %>% 
+  mutate(month=factor(month)) %>% 
+  mutate(month=fct_relevel(month,c("January","February","March","April","May","June","July","August","September","October","November","December"))) %>%
+ arrange(month)
+```
+
+# Shaded are to mark concentrations <0.01
+the shaded rectangle is to show which data is outside the LOD (-2 is equal to 0.01 mgL)
+
+```{r}
+rectangle_ranges <- data.frame(from=-2,to=-8)
+```
+
+# Model A histograms 
+```{r}
+hista<-ggplot() +
+  geom_histogram(data=monthly_observedTRP1, aes(x=log10(concentrations), y = ..ncount..), bins=80, position = "identity", fill= "#0C7BDC")+ 
+  # observations are blue
+  geom_histogram(data=diffuseconcentrations_months1, aes(x=log10(concentrations), y = ..ncount..), 
+                 bins=80, position = "identity", fill= "#FFC20A", alpha=0.6)+ # predictions are yellow
+  ggtitle("Model A")+
+  facet_wrap(.~month)+  
+  geom_rect(data= rectangle_ranges,inherit.aes = FALSE, aes(xmin=from,xmax=to,ymin=-Inf,ymax=+Inf),fill="#282f33",alpha=0.3) +
+  theme(strip.text = element_text(size = 12),
+        legend.position="top",
+        legend.title=element_blank(),
+        axis.text.y = element_text(size = 14),
+        axis.text.x = element_text(size = 14,
+                                   angle=45,
+                                   hjust=0.95,vjust=1), 
+        plot.title = element_text(size = 14, 
+                                  face = "bold"))+
+  xlim(c(-8,0))+
+  scale_y_continuous(labels = label_percent())+
+  xlab(expression(paste("log"["10"], " P concentrations mg l"^-1))) +
+  ylab("")+
+  scale_fill_manual(values=c("#0C7BDC","#FFC20A")) +
+  scale_color_manual(values=c("#0C7BDC","#FFC20A")) 
+
+hista
+```
+
+# Model B histograms 
+```{r}
+histb<-ggplot() +
+  geom_histogram(data=monthly_observedTRP1, 
+                 aes(x=log10(concentrations), y = ..ncount..),
+                 bins=80, position = "identity", 
+                 fill= "#0C7BDC")+ # observations are blue
+  geom_histogram(data=global_ptool_conc_months1, 
+                 aes(x=log10(concentrations), 
+                     y = ..ncount..),bins=80, 
+                 position = "identity", 
+                 fill= "#FFC20A", alpha=0.6)+ # predictions are yellow
+  ggtitle("Model B")+
+  facet_wrap(.~month)+  
+  geom_rect(data= rectangle_ranges,inherit.aes = FALSE, aes(xmin=from,xmax=to,ymin=-Inf,ymax=+Inf),fill="#282f33",alpha=0.3) +
+  theme(strip.text = element_text(size = 12),
+        legend.position="top",
+        legend.title=element_blank(),
+        axis.text.y = element_text(size = 14),
+        axis.text.x = element_text(size = 14,
+                                   angle=45,
+                                   hjust=0.95,vjust=1), 
+        plot.title = element_text(size = 14, 
+                                  face = "bold",
+                                  hjust = 0.5))+
+  xlim(c(-8,0))+
+  scale_y_continuous(labels = label_percent())+
+  xlab(expression(paste("log"["10"], " P concentrations mg l"^-1))) +
+  ylab("") +
+  scale_fill_manual(values=c("#0C7BDC","#FFC20A")) +
+  scale_color_manual(values=c("#0C7BDC","#FFC20A"))
+histb
+```
+
+Histograms for the two models have been made by using two different histograms (one for predictions, one for observations), instead of collating the datasets into one dataframe, because this allows to control the transparency of each group (predictions vs observations), and therefore seeing the overlapping between the two distributions.
+
+# Density plot
+Merge overall concentrations in a single dataframe called comparison_df
+```{r}
+# make dataframe
+comparison_df <- data.frame(global_ptool_conc$Pconcentration_mgL, diffuseconcentrations$Pconcentration_mgL,lognormal_observed_TRP)
+
+# simplify column names 
+names(comparison_df)[names(comparison_df) == 'global_ptool_conc.Pconcentration_mgL'] <- 'global_ptool'
+names(comparison_df)[names(comparison_df) == 'diffuseconcentrations.Pconcentration_mgL'] <- 'diffuse_ptool'
+names(comparison_df)[names(comparison_df) == 'x'] <- 'observed'
+
+comparison_df1<-comparison_df%>%
+  pivot_longer(c("observed", "diffuse_ptool", "global_ptool"),values_to="concentrations",names_to="model")
+ comparison_df1$model<-as.factor(comparison_df1$model)
+ 
+head(comparison_df)
+```
+Labels for legend
+```{r}
+model_labels2<-c("Model A", "Model B", "Fitted to Observed TRP")
+```
+
+Get counts of data used for the plot 
+```{r}
+give.n <- function(x){
+   return(c(y = 0.1, label = length(x))) # y is the position 
+}
+```
+
+for the jitter
+```{r}
+sampled_jitter<-comparison_df1 %>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  sample_n(100)
+```
+
+# Figure 3 
+Plot with data filtered by LOD + 100 samples on top
+```{r}
+comparison_plot<-
+comparison_df1 %>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+ggplot(aes(x=model, y=log10(concentrations), 
+           color= model)) + 
+  ggdist::stat_halfeye(adjust = .5, width = .6, 
+                       .width = 0, justification = -.3) + 
+  scale_color_brewer(palette="Set2",
+                    name = "Model", 
+                    labels = model_labels2) +
+  geom_boxplot(width = .25, outlier.shape = NA) +
+  stat_summary(fun.data = give.n, geom = "text",hjust = 0.5, vjust = 0.9, color="black") + # fontface = "bold",
+  geom_point(data = sampled_jitter,
+    size = 1.5, alpha = .7,
+    position = position_jitter(width = .1)) +  
+  ylim(-2,0.5)+
+  # ggtitle("Overall model distributions") + 
+  # xlab("Model")+
+  ylab(expression(paste("log"["10"], " P concentrations mg l"^-1))) +
+  theme(axis.title.x = element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.x=element_blank()) 
+comparison_plot
+```
+
+# Save Figure 3
+```{r}
+ggsave(filename ="results/20230920_comparison_plot.png", comparison_plot,width = 7, height = 5,
+       dpi = 320, units = "in", device='png')
+```
+
+# Monthly Density plots
+Draw distribution of observed monthly TRP concentrations, with boxplot on top + some jittered data points 
+
+Merge two df: observations and predictions
+```{r}
+# add a column to identify what is what
+monthly_observedTRP$model<-as.factor("observations")
+global_ptool_conc_months$model<-as.factor("predictions")
+
+# use rbind to merge the two dfs in one
+total_months <- rbind(monthly_observedTRP, global_ptool_conc_months)
+total_months
+#nrow(total_months)
+
+diffuseconcentrations_months$model<-as.factor("predictions")
+total_diffuse_months <- rbind(monthly_observedTRP, diffuseconcentrations_months)
+total_diffuse_months
+#nrow(total_diffuse_months)
+```
+
+```{r}
+total_months1<-total_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+total_months1$month<-as.factor(total_months1$month)
+total_months1
+nrow(total_months1)
+
+total_diffuse_months1<-total_diffuse_months%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+total_diffuse_months1$month<-as.factor(total_diffuse_months1$month)
+total_diffuse_months1
+#nrow(total_diffuse_months1)
+```
+
+Reordering group factor levels
+```{r}
+total_months1_new <- total_months1  # Replicate data
+total_months1_new$month <- factor(total_months1$month, levels = c("January","February","March","April","May","June","July","August","September","October","November","December")) # 
+
+total_diffuse_months1_new<- total_diffuse_months1
+total_diffuse_months1$month <- factor(total_diffuse_months1$month, levels = c("January","February","March","April","May","June","July","August","September","October","November","December"))
+```
+
+Months as factor for observations too
+```{r}
+monthly_observedTRP1<-monthly_observedTRP%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+monthly_observedTRP1$month<-as.factor(monthly_observedTRP1$month)
+```
+
+Get counts of data used for the plot 
+```{r}
+give.n <- function(x){
+   return(c(y = 0, label = length(x))) # y is the position 
+}
+```
+
+for the jitter
+```{r}
+monthly_observedTRP1_sampled<-monthly_observedTRP1 %>%
+  sample_n(360)
+```
+
+# Observed Density 
+```{r}
+observed_log_density_plot <-monthly_observedTRP1 %>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  ggplot(aes(x=month, y=log10(concentrations), 
+             color=month)) +
+  ggdist::stat_halfeye(adjust = .5, width = .6, 
+                       .width = 0, justification = -.3) + 
+    geom_boxplot(width = .25, outlier.shape = NA) +
+  ggtitle("Observations") +
+  geom_point(data = monthly_observedTRP1_sampled,
+    size = 1.5, alpha = .7,
+    position = position_jitter(width = .1)) +
+  stat_summary(fun.data = give.n, geom = "text",hjust = 0.5, vjust = 0.9, color="black")+ 
+  xlab("month")+
+  ylab("") + 
+  scale_y_continuous(limits = c(-2,0), breaks = c(0, -0.5,-1,-1.5,-2))+
+  theme(legend.position="none", 
+        axis.text.y = element_text(size = 14), 
+        axis.title.y = element_text(size = 14), 
+        plot.title = element_text(size = 14, face = "bold"),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+
+observed_log_density_plot 
+```
+
+count samples
+```{r}
+give.n <- function(x){
+   return(c(y = 0.1, label = length(x))) # y is the position 
+}
+```
+
+for the jitter
+```{r}
+sampled_jitter_global<-global_ptool_conc_months1 %>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  sample_n(360)
+```
+
+# Model B density plot
+```{r}
+predicted_log_density <-global_ptool_conc_months1 %>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  ggplot(aes(x=month, y=log10(concentrations), 
+             color=month)) +
+  ggdist::stat_halfeye(adjust = .5, width = .6, 
+                       .width = 0, justification = -.3) +
+  geom_boxplot(width = .25, outlier.shape = NA) +
+  stat_summary(fun.data = give.n, geom = "text",hjust = 0.5, vjust = 0.9, color="black") + 
+  geom_point(data = sampled_jitter_global,
+    size = 1.5, alpha = .7,
+    position = position_jitter(width = .1)) +  
+  scale_x_discrete(labels= labels) +
+  ggtitle("Predictions Model B") +
+  xlab("month")+
+  ylab("") + 
+  scale_y_continuous(limits = c(-2,0.1), breaks = c(0, -0.5,-1,-1.5,-2))+
+  theme(legend.position="none", 
+        axis.text.y = element_text(size = 14), 
+        axis.title.y = element_text(size = 14), 
+        plot.title = element_text(size = 14, face = "bold"),
+        axis.text.x = element_blank(),
+        axis.title.x = element_text(size = 14))
+
+predicted_log_density
+```
+
+count samples
+```{r}
+give.n <- function(x){
+   return(c(y = 0.1, label = length(x))) # y is the position 
+}
+```
+
+for the jitter
+```{r}
+sampled_jitter_diffuse<-diffuseconcentrations_months1 %>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  sample_n(360)
+```
+
+# Model A density plot
+```{r}
+predicted_log_density_diffuse<-
+  diffuseconcentrations_months1%>%
+  filter(concentrations>= 0.01 & concentrations <= 5)  %>%
+  ggplot(aes(x=month, y=log10(concentrations), 
+             color=month)) +
+  ggdist::stat_halfeye(adjust = .5, width = .6, 
+                       .width = 0, justification = -.3) + 
+  geom_boxplot(width = .25, outlier.shape = NA) +
+  scale_x_discrete(labels= labels) +
+  ggtitle("Predictions Model A") +
+  geom_point(data = sampled_jitter_diffuse,size = 1.5, alpha = .7,
+    position = position_jitter(width = .1)) +  
+  stat_summary(fun.data = give.n, geom = "text",hjust = 0.5, vjust = 0.9, color="black") + 
+  xlab("month")+
+  ylab("") + 
+  scale_y_continuous(limits = c(-2,0.1), breaks = c(0, -0.5,-1,-1.5,-2))+
+  theme(legend.position="none", 
+        axis.text.y = element_text(size = 14), 
+        axis.title.y = element_text(size = 14), 
+        plot.title = element_text(size = 14, face = "bold"),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+
+predicted_log_density_diffuse
+```
+
+# Save density plots
+```{r}
+ggsave(filename = "results/20230920predicted_log_density.png",
+       predicted_log_density, width = 7, height = 5,
+       dpi = 320, units = "in", device='png')
+ggsave(filename = "results/20230920predicted_log_density_diffuse.png",
+       predicted_log_density_diffuse, width = 7, height = 5,
+       dpi = 320, units = "in", device='png')
+ggsave(filename = "results/20230920observed_log_density_plot.png",
+       observed_log_density_plot, width = 7, height = 5,
+       dpi = 320, units = "in", device='png')
+```
+
+# Arrange density plots
+```{r warning=F}
+arranged_density<-ggarrange(observed_log_density_plot,predicted_log_density_diffuse, predicted_log_density, ncol=1,nrow=3)
+
+arranged_density<-annotate_figure(arranged_density, left = text_grob(expression(paste("log"["10"], " P concentrations mg l"^-1)), rot = 90)) 
+
+ggsave(filename ="results/20230920arranged_density.png", arranged_density, height = 15, width = 10, units = "in", dpi = 420, device='png')
+```
+
+#  Save histograms together
+Assemble and save histograms
+```{r warning=F}
+arranged_hist<-ggarrange(hista,histb,ncol=1,nrow=2)
+ggsave(filename ="results/20230920arranged_hist_plot.png", arranged_hist,width = 7, height = 10, dpi = 420, units = "in", device='png')
+```
+
+#  Save Figure 4 
+Assemble histograms and density plots for paper
+```{r}
+figure4<-ggarrange(arranged_hist, arranged_density, ncol=2,nrow=1, labels = c("A", "B"))
+ggsave(filename ="results/20230920figure4.png", figure4, width = 15, height = 10, dpi = 420, units = "in", device='png')
+```
