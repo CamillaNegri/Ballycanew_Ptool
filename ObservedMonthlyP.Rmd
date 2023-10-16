@@ -4,7 +4,7 @@ author: "Camilla Negri"
 date: "07/12/2022"
 ---
 
-A notebook to extract monthly distributions from phosphorus observations
+A notebook to extract monthly distributions from phosphorus observations.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

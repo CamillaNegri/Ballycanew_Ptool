@@ -323,7 +323,7 @@ total_diffuse_months1
 Reordering group factor levels
 ```{r}
 total_months1_new <- total_months1  # Replicate data
-total_months1_new$month <- factor(total_months1$month, levels = c("January","February","March","April","May","June","July","August","September","October","November","December")) # 
+total_months1_new$month <- factor(total_months1$month, levels = c("January","February","March","April","May","June","July","August","September","October","November","December")) 
 
 total_diffuse_months1_new<- total_diffuse_months1
 total_diffuse_months1$month <- factor(total_diffuse_months1$month, levels = c("January","February","March","April","May","June","July","August","September","October","November","December"))
