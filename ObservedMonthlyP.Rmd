@@ -1,0 +1,242 @@
+---
+title: "Observed monthly P concentrations Distributions"
+author: "Camilla Negri"
+date: "07/12/2022"
+---
+
+A notebook to extract monthly distributions from phosphorus observations
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(tidyverse)
+library(fitdistrplus)
+library(ggbeeswarm)
+
+# load observed data 
+hydrology<-read.csv("data/Ballycanew_data.csv")
+```
+
+# Parsing data a monthly time step
+```{r parsing_data}
+hydrology$Date<- parse_date_time(hydrology$Date, "d/m/Y")
+
+hydrology$day <- yday(hydrology$Date)
+hydrology$months <- month(hydrology$Date)
+hydrology$year <- year(hydrology$Date)
+
+# assign months
+hydrology$month<-NA # new blank column
+hydrology$month[hydrology$months %in% c(1)]<-"January"
+hydrology$month[hydrology$months %in% c(2)]<-"February"
+hydrology$month[hydrology$months %in% c(3)]<-"March"
+hydrology$month[hydrology$months %in% c(4)]<-"April"
+hydrology$month[hydrology$months %in% c(5)]<-"May"
+hydrology$month[hydrology$months %in% c(6)]<-"June"
+hydrology$month[hydrology$months %in% c(7)]<-"July"
+hydrology$month[hydrology$months %in% c(8)]<-"August"
+hydrology$month[hydrology$months %in% c(9)]<-"September"
+hydrology$month[hydrology$months %in% c(10)]<-"October"
+hydrology$month[hydrology$months %in% c(11)]<-"November"
+hydrology$month[hydrology$months %in% c(12)]<-"December"
+
+# %in% value matching = returns a vector of the positions of (first) matches of its first argument in its second
+
+hydrology$month <- factor(hydrology$month, levels=month.name) 
+# encodes a vector as a factor
+head(hydrology)
+```
+
+Now the daily dataset can be filtered by month
+```{r}
+hydrology1<-
+  hydrology%>%
+  dplyr::select(month, TRP..mg.l.)
+```
+
+Now months as columns, TP (TRP) as values 
+```{r}
+hydrology1<-hydrology1 %>%
+  group_by(month) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = month, values_from = TRP..mg.l.)%>%
+  dplyr::select(-row)
+```
+
+This gets a tibble, which plotdist really does not like, using `pull()` might be the solution
+```{r}
+as.data.frame(hydrology1)
+daily_January<-pull(hydrology1,January)
+```
+
+# distribution of daily NTU in January
+```{r}
+plotdist(c(na.exclude(daily_January)), histo = TRUE, demp = TRUE) # using c(na.exclude()) to get rid of "Error in density.default(data) : 'x' contains missing values" and get CDF
+```
+
+Looks like a lognormal, as expected
+
+# Use `fitdist` from `fitdistrplus` to fit the Lognormal
+ 
+```{r}
+Jan_lognormal <- fitdist(daily_January[!is.na(daily_January)], "lnorm") # both !is.na and na.exclude still produce the warning 
+summary(Jan_lognormal) # gives std errors too
+```
+
+Draw a random lognormal with `rlnorm`
+```{r}
+set.seed(666)
+```
+
+```{r}
+sum(rlnorm(n = 30, mean = -3.0, sd = 0.37)) # sum of the randomly drawn lognormal, this means I have a total monthly TRP 
+```
+
+Divide the summed TRP by 30, because concentrations cannot be cumulated
+```{r}
+sum(rlnorm(n = 30, mean = -3.0, sd = 0.37))/30 # sum of the randomly drawn lognormal, this means I have a total monthly TRP
+
+rlnorm(n = 30, mean = -3.0, sd = 0.37)
+```
+
+Generate 1000 lognormals, sum the 30 days in each
+```{r}
+monthlyTRP<-lapply(1:1000, function(i) sum(rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2]))/30)
+```
+
+Test for distribution of monthly Q in January
+```{r}
+vectorTRP<-unlist(monthlyTRP) #you have to unlist the list so it can be plotted
+plotdist(vectorTRP, histo = TRUE, demp = TRUE)
+```
+
+Use `fitdist` from `fitdistrplus` to fit the Lognormal
+```{r}
+Jan_monthly_lognormal <- fitdist(vectorTRP, "lnorm") # natural log
+summary(Jan_monthly_lognormal)
+```
+
+# Write function to apply to all the columns, so to each month
+```{r}
+monthly_lognormal_estimates <- function(MYCOLUMN) {
+  daily_lognormal<-fitdist(MYCOLUMN[!is.na(MYCOLUMN)], "lnorm") #fit lnorm to daily data
+  monthlyTRP<-lapply(1:1000, function(i) sum(rlnorm(n = 30, mean = daily_lognormal$estimate[1], sd = daily_lognormal$estimate[2]),na.rm = T)/30) # generate 1000 lnorm with the fitted params above, then sum the 30 datapoints in each lnorm so to cumulate days into months, then divide again to get avg concentration in that month
+  vectorTRP<-unlist(monthlyTRP) # convert into vec which is what is needed in fitdist
+  monthly_lognormal<-fitdist(vectorTRP[!is.na(vectorTRP)], "lnorm") # fit monthly lnorm
+  return(monthly_lognormal$estimate) # return parameters
+} 
+```
+
+Apply function to all columns
+```{r warning=F}
+monthly_lnorm_params<-apply(hydrology1, 2, monthly_lognormal_estimates)
+```
+
+```{r make results more readable with a df}
+# transpose and convert to dataframe
+monthly_lnorm_params<-as.data.frame(t(monthly_lnorm_params))
+
+# convert to base 10
+monthly_lnorm_params$meanlog10<-monthly_lnorm_params$meanlog/log(10)
+monthly_lnorm_params$sdlog10<-monthly_lnorm_params$sdlog/log(10)
+
+monthly_lnorm_params
+```
+
+Save csv
+```{r}
+write.csv(monthly_lnorm_params,"data/monthly_fitted_TRP_observations_Ballycanew_params.csv" )
+```
+
+Sample 10000 values for each month
+I can sample from the TRP fitted lognormal 
+```{r}
+sampled_observedTRP<-apply(monthly_lnorm_params, 1, function (i) rlnorm(10000, meanlog = monthly_lnorm_params$meanlog, sdlog = monthly_lnorm_params$sdlog))
+
+sampled_observedTRP<-as.data.frame(sampled_observedTRP)
+# class(sampled_observedTP)
+```
+
+Save csv
+```{r}
+write.csv(sampled_observedTRP,"data/monthly_fitted_TRP_observations.csv" )
+```
+
+
+Sample fewer values for each month from the TRP fitted lognormal 
+```{r}
+sampled_observedTRP2<-apply(monthly_lnorm_params, 1, function (i) rlnorm(382, meanlog = monthly_lnorm_params$meanlog, sdlog = monthly_lnorm_params$sdlog))
+
+sampled_observedTRP2<-as.data.frame(sampled_observedTRP2)
+# class(sampled_observedTP)
+```
+
+```{r}
+labels<-c("January","February","March","April",          "May","June","July","August","September","October","November","December")
+
+sampled_observedTRP1<-sampled_observedTRP%>%
+  pivot_longer(c("January","February","March","April","May","June","July","August","September","October","November","December"),values_to="concentrations",names_to="month")
+```
+
+Draw violins with boxplot on top
+```{r, fig.height=9, fig.width=18}
+violin_plot <-sampled_observedTRP1 %>%
+  ggplot(aes(x=month, y=concentrations, fill=month)) +
+  geom_violin() +
+  scale_x_discrete(labels= labels) +
+  ggtitle("") + 
+  geom_boxplot(width=.1)+
+  xlab("month")+
+  ylab("TRP concentrations mg L")+
+  theme(legend.position="none")
+
+violin_plot 
+```
+
+Plot whisker plots
+```{r}
+ggplot(sampled_observedTRP1, aes(concentrations, month))+
+  geom_boxplot()+
+  theme(
+    plot.title = element_text(size=11),
+    axis.title=element_text(size=11),
+    axis.text=element_text(size=11) #,angle = 90 
+  ) +
+  ggtitle("Fitted TRP concentrations mg/L*month")
+```
+
+Plot whisker plots with raw data on top (too many datapoints)
+
+Example code from https://www.cedricscherer.com/2021/06/06/visualizing-distributions-with-raincloud-plots-and-how-to-create-them-with-ggplot2/
+
+reorder months
+```{r}
+sampled_observedTRP1$month<- factor(sampled_observedTRP1$month, levels = c("January","February","March","April","May","June","July","August","September","October","November","December"))
+```
+
+```{r}
+sampled_observedTRP1%>%
+  sample_n(1200)%>%
+ggplot(aes(x = month, y = concentrations)) +
+  geom_boxplot(fill = "grey92") +
+  ## use either geom_point() or geom_jitter()
+  geom_point(
+    ## draw bigger points
+    size = 2,
+    ## add some transparency
+    alpha = .3,
+    ## add some jittering
+    position = position_jitter(
+      ## control randomness and range of jitter
+      seed = 1, width = .2
+    )
+  )+ 
+  theme(axis.text.x = element_text(hjust=1,
+                                   angle=45))
+```
+
