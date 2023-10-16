@@ -26,7 +26,7 @@ There is a data folder containing:
 There is a results folder containing:
 - The results of the two BBNs (20230920_Ptool_v4.csv, 20230920_Ptool_v4_months.csv, 20230920_DiffusePtool_v4.csv, 20230920_DiffusePtool_v4_months.csv)
 
-- The results of Genie_Results.Rmd (20230920_filtered_DiffusePtool_v4_monthly_means.csv, 20230920_filtered_DiffusePtool_v4_monthly_median.csv, ,20230920_filtered_Ptool_v4_monthly_means.csv,20230920_filtered_Ptool_v4_monthly_median.csv)
+- The results of Genie_Results.Rmd (20230920_filtered_DiffusePtool_v4_monthly_means.csv, 20230920_filtered_DiffusePtool_v4_monthly_median.csv, 20230920_filtered_Ptool_v4_monthly_means.csv, 20230920_filtered_Ptool_v4_monthly_median.csv)
 
 - The figure files made with the figures_for_publication.Rmd file. 
 
