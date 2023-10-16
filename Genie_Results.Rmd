@@ -222,9 +222,15 @@ Sample from the elicited TRP distribution
 ```{r}
 sampled_observedTRP<-sampleFit(myTRPfit, 10000) 
 lognormal_observed_TRP<-sampled_observedTRP[1:10000, 4] #subset only the column we're interested in
+class(lognormal_observed_TRP)
+head(lognormal_observed_TRP)
 ```
 
 `lognormal_observed_TRP` is the distribution that will be used to calculate the percentage bias. 
+
+```{r}
+write.csv(lognormal_observed_TRP, "data/lognormal_observed_TRP.csv")
+```
 
 #############################################################################################################################
 
