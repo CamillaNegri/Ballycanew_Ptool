@@ -31,7 +31,7 @@ In this turbidity dataset:
 
 - SuspendedSedimentLoad[g]	sediment load is calculated by multiplying the daily sediment concentration by the discharge
 
-# Parsing data a monthly time step
+Parsing data a monthly time step
 ```{r parsing_data}
 turbidity$Date<- parse_date_time(turbidity$Date, "d/m/Y")
 
@@ -78,7 +78,7 @@ turbidity1<-turbidity1 %>%
   dplyr::select(-row)
 ```
 
-This gets me a tibble, which plotdist really does not like, using `pull()` might be the solution
+This gets a tibble, which plotdist really does not like, using `pull()` might be the solution
 ```{r}
 as.data.frame(turbidity1)
 daily_January<-pull(turbidity1,January)
@@ -91,40 +91,40 @@ plotdist(c(na.exclude(daily_January)), histo = TRUE, demp = TRUE) # using c(na.e
 
 Looks like a lognormal, as expected.
 
-# Use `fitdist` from `fitdistrplus` to fit the Lognormal
+Use `fitdist` from `fitdistrplus` to fit the Lognormal
 ```{r}
 Jan_lognormal <- fitdist(daily_January[!is.na(daily_January)], "lnorm") # both !is.na and na.exclude still produce the warning 
 summary(Jan_lognormal) # gives std errors too
 ```
 
-# set seed
+Set seed
 ```{r}
 set.seed(666)
 ```
 
-# Draw a random lognormal with `rlnorm`
+Draw a random lognormal with `rlnorm`
 ```{r}
 sum(rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])) # sum of the randomly drawn lognormal, this means I have a total monthly NTU 
 ```
 
-# Generate 1000 lognormals, sum the 30 days in each
+Generate 1000 lognormals, sum the 30 days in each
 ```{r}
 monthlyNTU<-lapply(1:1000, function(i) sum(rlnorm(n = 30, mean = Jan_lognormal$estimate[1], sd = Jan_lognormal$estimate[2])))
 ```
 
-# distribution of monthly Q in January
+Distribution of monthly Q in January
 ```{r}
 vectorNTU<-unlist(monthlyNTU) #you have to unlist the list so it can be plotted
 plotdist(vectorNTU, histo = TRUE, demp = TRUE)
 ```
 
-# Use `fitdist` from `fitdistrplus` to fit the Lognormal
+Use `fitdist` from `fitdistrplus` to fit the Lognormal
 ```{r}
 Jan_monthly_lognormal <- fitdist(vectorNTU, "lnorm") # natural log
 summary(Jan_monthly_lognormal)
 ```
 
-# Write function to apply to all turbidity1 columns, so to each month
+Write function to apply bootstrapping to all turbidity1 columns, so to each month
 ```{r}
 monthly_lognormal_estimates <- function(MYCOLUMN) {
   daily_lognormal<-fitdist(MYCOLUMN[!is.na(MYCOLUMN)], "lnorm") #fit lnorm to daily data
@@ -135,12 +135,12 @@ monthly_lognormal_estimates <- function(MYCOLUMN) {
 } 
 ```
 
-# Apply function to all columns
+Apply function to all columns
 ```{r warning=F}
 monthly_lnorm_params<-apply(turbidity1, 2, monthly_lognormal_estimates)
 ```
 
-# make results more readable with a df
+Make results more readable with a df
 ```{r}
 # transpose and convert to dataframe
 monthly_lnorm_params<-as.data.frame(t(monthly_lnorm_params))
@@ -152,6 +152,7 @@ monthly_lnorm_params$sdlog10<-monthly_lnorm_params$sdlog/log(10)
 monthly_lnorm_params
 ```
 
+Save results
 ```{r}
 write.csv(monthly_lnorm_params,"data/monthly_turbidity_distributions_Ballycanew.csv")
 ```
