@@ -44,5 +44,5 @@ Spatial datasets are not part of this repository, but the paper reports summary 
 ![Agricultural Catchments Programme logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/ACP-logo.png)
 ![Teagasc- Agriculture and Food Development Authority logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/logo-teagasc2x.png)
 ![University of Reading logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/UoR_logo.png)
-![The James Hutton Institute logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/Hutton_logo_Horiz_CMYK.jpg)
+![The James Hutton Institute logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/JHI_logo.jpg)
 ![Biomathemathics and Statistics Scotland (BioSS) logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/BioSS_logo.png)
