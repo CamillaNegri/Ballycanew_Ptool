@@ -5,7 +5,7 @@ A repository to analyze the results of the BBN development and parametrization i
 # Start here
 
 Two Bayesian Belief Networks for phosphorus losses in an Irish agricultural catchment are parametrized and analyzed here. The BBNs were developed with the GeNIe tool (free for academics, https://download.bayesfusion.com/files.html?category=Academia) and can be accessed at these two files: DiffusePtool_v4.xdsl, Ptool_pointanddiffuse_v4.xdsl in the data folder [Go to Data and Results section](#data-and-results). To simulate P losses at the stream outlet, open a BBN file and hit the lightning button. The posterior distributions can be visualized when opening the "In stream TRP concentration mg L-1" node. These can be copied and pasted onto a csv file. The R code in GenieResults.Rmd is set up to analyzed results from both BBNs as is and with posterior distributions of TRP concentration per month (this is obtained by selecting each month as evidence prior to triggering the model with the lightning button. Posterior distributions of "In stream TRP concentration mg L-1" are already uploaded in the results folder. 
-In the [Go to Code](#code) section you can find a description of all the Rmd files for the both the BBN paramtetrization and the analysis of results. 
+In the [Code section](#code)  you can find a description of all the Rmd files for the both the BBN paramtetrization and the analysis of results. 
 
 # Code
 
@@ -28,7 +28,7 @@ There is a data folder containing:
 
 - the csv files of the distributions obtained from bootstrapping the original datasets (monthly_fitted_TRP_observations.csv, monthly_fitted_Q_observations_Ballycanew.csv, monthly_turbidity_distributions_Ballycanew.csv, monthly_discharge_distributions.csv)
 
-- the two models files (Model A in DiffusePtool_v4.xdsl ![Model A](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/DiffusePtool_v4.xdsl) and Model B in Ptool_pointanddiffuse_v4.xdsl ![Model B](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/Ptool_pointanddiffuse_v4.xdsl))
+- the two models files (Model A in DiffusePtool_v4.xdsl (https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/DiffusePtool_v4.xdsl) and Model B in Ptool_pointanddiffuse_v4.xdsl (https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/Ptool_pointanddiffuse_v4.xdsl))
 
 There is a results folder containing:
 - The results of the two BBNs (20230920_Ptool_v4.csv, 20230920_Ptool_v4_months.csv, 20230920_DiffusePtool_v4.csv, 20230920_DiffusePtool_v4_months.csv).
