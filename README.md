@@ -28,9 +28,9 @@ There is a data folder containing:
 
 - the csv files of the distributions obtained from bootstrapping the original datasets (monthly_fitted_TRP_observations.csv, monthly_fitted_Q_observations_Ballycanew.csv, monthly_turbidity_distributions_Ballycanew.csv, monthly_discharge_distributions.csv)
 
-- the two models files (Model A in DiffusePtool_v4.xdsl (https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/DiffusePtool_v4.xdsl) and Model B in Ptool_pointanddiffuse_v4.xdsl (https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/Ptool_pointanddiffuse_v4.xdsl))
+- the two models files (Model A in [DiffusePtool_v4.xdsl](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/DiffusePtool_v4.xdsl) and Model B in [Ptool_pointanddiffuse_v4.xdsl](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/data/Ptool_pointanddiffuse_v4.xdsl)
 
-There is a results folder containing:
+There is a [results folder](https://github.com/CamillaNegri/Ballycanew_Ptool/tree/main/results) containing:
 - The results of the two BBNs (20230920_Ptool_v4.csv, 20230920_Ptool_v4_months.csv, 20230920_DiffusePtool_v4.csv, 20230920_DiffusePtool_v4_months.csv).
 
 - The results of GenieResults.Rmd (20230920_filtered_DiffusePtool_v4_monthly_means.csv, 20230920_filtered_DiffusePtool_v4_monthly_median.csv, 20230920_filtered_Ptool_v4_monthly_means.csv, 20230920_filtered_Ptool_v4_monthly_median.csv)
