@@ -39,6 +39,10 @@ There is a results folder containing:
 
 Spatial datasets are not part of this repository, but the paper reports summary information on them as well as references to research that originated them.
 
-# Acknoledgemnts
+# Acknowledgments
 
-
+![Agricultural Catchments Programme logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/ACP-logo.png)
+![Teagasc- Agriculture and Food Development Authority logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/logo-teagasc2x.png)
+![University of Reading logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/UoR_logo.png)
+![The James Hutton Institute logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/Hutton_logo_Horiz_CMYK.jpg)
+![Biomathemathics and Statistics Scotland (BioSS) logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/BioSS_logo.png)
