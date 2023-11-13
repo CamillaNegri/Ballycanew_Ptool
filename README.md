@@ -2,20 +2,27 @@
 
 A repository to analyze the results of the BBN development and parametrization in the Ballycanew catchment. This is a repository for the paper titled "Bayesian network modelling of phosphorus pollution in agricultural catchments with high-resolution data".
 
+# Start here
+
+Two Bayesian Belief Networks for phosphorus losses in an Irish agricultural catchment are parametrized and analyzed here. The BBNs were developed with the GeNIe tool (free for academics, https://download.bayesfusion.com/files.html?category=Academia) and can be accessed at these two files: DiffusePtool_v4.xdsl, Ptool_pointanddiffuse_v4.xdsl in the data folder. To simulate P losses at the stream outlet, open a BBN file and hit the lightning button. The posterior distributions can be visualized when opening the "In stream TRP concentration mg L-1" node. These can be copied and pasted onto a csv file. The R code in GenieResults.Rmd is set up to analyzed results from both BBNs as is and with posterior distributions of TRP concentration per month (this is obtained by selecting each month as evidence prior to triggering the model with the lightning button. Posterior distributions of "In stream TRP concentration mg L-1" are already uploaded in the results folder. 
+
+
 # Code
-There area several R files aimed at the analysis of the BBN developed in this study:
 
-- DischargeDistributions.Rmd - a file detailing the bootstrapping procedure aimed at obtaining monthly discharge distributions for the BBN.
+There are several R files aimed at the analysis of the BBN developed in this study:
 
-- TurbidityDistributions.Rmd - a file detailing the bootstrapping procedure aimed at obtaining monthly turbidity distributions for the BBN.
+- DischargeDistributions.Rmd - a file detailing the bootstrapping procedure to obtain monthly discharge distributions for the BBN.
 
-- Genie_Results.Rmd - a file detailing the code used for the analysis of the BBN results.
+- TurbidityDistributions.Rmd - a file detailing the bootstrapping procedure to obtain monthly turbidity distributions for the BBN.
 
-- figures_for_publication.Rmd - a file detailing the code used to obtain the figures used in the publication.
+- GenieResults.Rmd - a file detailing the code used for the analysis of the BBN results.
 
-- ObservedMonthlyP.Rmd - a file detailing the bootstrapping procedure aimed at obtaining monthly TRP distributions for the BBN.
+- FiguresPublication.Rmd - a file detailing the code used to obtain the figures used in the publication.
+
+- ObservedMonthlyP.Rmd - a file detailing the bootstrapping procedure to obtain monthly BBN Total Reactive Phosphorus(TRP) distributions.
 
 # Data and Results
+
 There is a data folder containing:
 - the original datasets (Ballycanew_data.csv - daily TRP concentrations, Ballycanew_discharge.csv - daily total discharge, Ballycanew_Turbidity_Sediments. csv - daily turbidity and sediment concentrations)
 
@@ -24,10 +31,14 @@ There is a data folder containing:
 - the two models files (Model A in DiffusePtool_v4.xdsl and Model B in Ptool_pointanddiffuse_v4.xdsl)
 
 There is a results folder containing:
-- The results of the two BBNs (20230920_Ptool_v4.csv, 20230920_Ptool_v4_months.csv, 20230920_DiffusePtool_v4.csv, 20230920_DiffusePtool_v4_months.csv)
+- The results of the two BBNs (20230920_Ptool_v4.csv, 20230920_Ptool_v4_months.csv, 20230920_DiffusePtool_v4.csv, 20230920_DiffusePtool_v4_months.csv).
 
-- The results of Genie_Results.Rmd (20230920_filtered_DiffusePtool_v4_monthly_means.csv, 20230920_filtered_DiffusePtool_v4_monthly_median.csv, 20230920_filtered_Ptool_v4_monthly_means.csv, 20230920_filtered_Ptool_v4_monthly_median.csv)
+- The results of GenieResults.Rmd (20230920_filtered_DiffusePtool_v4_monthly_means.csv, 20230920_filtered_DiffusePtool_v4_monthly_median.csv, 20230920_filtered_Ptool_v4_monthly_means.csv, 20230920_filtered_Ptool_v4_monthly_median.csv)
 
-- The figure files made with the figures_for_publication.Rmd file. 
+- The figure files are made with the FiguresPublication.Rmd file. 
 
-Spatial datasets are not part of this repository, but the paper reports summary information on them as well as references to their original research.
+Spatial datasets are not part of this repository, but the paper reports summary information on them as well as references to research that originated them.
+
+# Acknoledgemnts
+
+
