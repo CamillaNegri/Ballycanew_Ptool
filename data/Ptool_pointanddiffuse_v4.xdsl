@@ -660,7 +660,7 @@
 				<interior color="99ccff" />
 				<outline color="000080" />
 				<font color="000000" name="Arial" size="12" bold="true" />
-				<position>1161 1694 1313 1778</position>
+				<position>792 1683 944 1767</position>
 				<barchart active="true" width="342" height="138" />
 			</node>
 		</genie>
