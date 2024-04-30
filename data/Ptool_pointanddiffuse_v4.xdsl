@@ -62,18 +62,18 @@
 		</cpt>
 		<equation id="baseflow_plus_elevated_baseflow">
 			<parents>Mean_monthly_runoff</parents>
-			<definition lower="0" upper="629653">baseflow_plus_elevated_baseflow=Mean_monthly_runoff*0.56</definition>
+			<definition lower="0" upper="629651">baseflow_plus_elevated_baseflow=Mean_monthly_runoff*0.56</definition>
 			<discretization>
-				<interval label="Very_low" upper="7.32" />
-				<interval label="Low" upper="11.87" />
-				<interval label="Medium" upper="24.55" />
-				<interval label="High" upper="48" />
-				<interval label="Very_high" upper="629653" />
+				<interval label="Very_low" upper="61277" />
+				<interval label="Low" upper="127166" />
+				<interval label="Medium" upper="209407" />
+				<interval label="High" upper="451801" />
+				<interval label="Very_high" upper="629651" />
 			</discretization>
 		</equation>
 		<equation id="WEP">
 			<parents>Morgan_P Landuse_type</parents>
-			<definition lower="0" upper="15">WEP=Choose(Morgan_P,Choose(Landuse_type,0.45*Uniform(0,3)+0.19,0.6*Uniform(0,3)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(3.1,6)+0.19,0.6*Uniform(3.1,5)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(6.1,10)+0.19,0.6*Uniform(5.1,8)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(10,30)+0.19,0.6*Uniform(8.1,30)+1.46,0.001))</definition>
+			<definition lower="0" upper="15">WEP=Choose(Morgan_P,Choose(Landuse_type,0.45*Uniform(0,3)+0.19,0.6*Uniform(0,3)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(3.1,6)+0.19,0.6*Uniform(3.1,5)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(6.1,10)+0.19,0.6*Uniform(5.1,8)+1.46,0.001),Choose(Landuse_type,0.45*Uniform(10.1,30)+0.19,0.6*Uniform(8.1,30)+1.46,0.001))</definition>
 			<discretization>
 				<interval label="Low" upper="3" />
 				<interval label="Medium" upper="5" />
@@ -84,23 +84,23 @@
 		</equation>
 		<equation id="Surface_runoff">
 			<parents>Mean_monthly_runoff</parents>
-			<definition lower="0" upper="487635">Surface_runoff=Mean_monthly_runoff*0.26</definition>
+			<definition lower="0" upper="292338">Surface_runoff=Mean_monthly_runoff*0.26</definition>
 			<discretization>
-				<interval label="Very_low" upper="2.7" />
-				<interval label="Low" upper="4.5" />
-				<interval label="Medium" upper="9.65" />
-				<interval label="High" upper="14.4" />
-				<interval label="Very_high" upper="487635" />
+				<interval label="Very_low" upper="28450" />
+				<interval label="Low" upper="59042" />
+				<interval label="Medium" upper="97225" />
+				<interval label="High" upper="209765" />
+				<interval label="Very_high" upper="292338" />
 			</discretization>
 		</equation>
 		<equation id="WSP">
-			<definition lower="0" upper="100">WSP=Lognormal(-0.9,1)</definition>
+			<definition lower="0" upper="8">WSP=Lognormal(-0.9,1)</definition>
 			<discretization>
-				<interval label="Very_Low" upper="14.8" />
-				<interval label="Low" upper="27.3" />
-				<interval label="Medium" upper="35.8" />
-				<interval label="High" upper="44.9" />
-				<interval label="Very_High" upper="100" />
+				<interval label="Very_Low" upper="0.09950000000000001" />
+				<interval label="Low" upper="0.21" />
+				<interval label="Medium" upper="0.355" />
+				<interval label="High" upper="0.91" />
+				<interval label="Very_High" upper="8" />
 			</discretization>
 			<property id="literature">Thomas, I.A., Mellander, P.-E., Murphy, P.N.C., Fenton, O., Shine, O., Djodjic, F., Dunlop, P., Jordan, P., 2016. A sub-field scale critical source area index for legacy phosphorus management using high resolution data. Agriculture, Ecosystems &amp; Environment 233, 238–252. https://doi.org/10.1016/j.agee.2016.09.012\n</property>
 		</equation>
@@ -349,18 +349,10 @@
 				<interval label="Bad" upper="10" />
 			</discretization>
 		</equation>
-		<equation id="Copy_of_PConcentration">
-			<parents>PConcentration</parents>
-			<definition lower="0.01" upper="5">Copy_of_PConcentration=If(PConcentration&lt;=0.01,0.01,PConcentration)</definition>
-			<discretization>
-				<interval label="Moderate" upper="0.035" />
-				<interval label="Bad" upper="5" />
-			</discretization>
-		</equation>
 		<cpt id="Discrete_TRPConcentration">
 			<state id="Good" />
 			<state id="Bad" />
-			<parents>Copy_of_PConcentration</parents>
+			<parents>PConcentration</parents>
 			<probabilities>1 0 0 1</probabilities>
 		</cpt>
 	</nodes>
@@ -662,14 +654,6 @@
 				<font color="000000" name="Arial" size="12" bold="true" />
 				<position>158 634 290 715</position>
 				<barchart active="true" width="338" height="149" />
-			</node>
-			<node id="Copy_of_PConcentration">
-				<name>Copy of In stream TRP concentration mg L-1</name>
-				<interior color="99ccff" />
-				<outline color="000080" />
-				<font color="000000" name="Arial" size="12" bold="true" />
-				<position>785 1698 937 1782</position>
-				<barchart active="true" width="342" height="138" />
 			</node>
 			<node id="Discrete_TRPConcentration">
 				<name>EQS (TRPconcentration mg L-1)</name>
