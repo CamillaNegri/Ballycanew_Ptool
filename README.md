@@ -39,6 +39,14 @@ There is a [results folder](https://github.com/CamillaNegri/Ballycanew_Ptool/tre
 
 Spatial datasets are not part of this repository, but the paper reports summary information on them as well as references to research that originated them.
 
+## Open Access peer-reviewed article
+Camilla Negri, Per-Erik Mellander, Nicholas Schurch, Andrew J. Wade, Zisis Gagkas, Douglas H. Wardell-Johnson, Kerr Adams, Miriam Glendell,
+Bayesian network modelling of phosphorus pollution in agricultural catchments with high-resolution data,
+Environmental Modelling & Software, Volume 178, 2024, 106073, ISSN 1364-8152, https://doi.org/10.1016/j.envsoft.2024.106073.
+
+## Preprint
+https://doi.org/10.31223/X5KX2R
+
 ## Acknowledgments
 
 ![Agricultural Catchments Programme logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/ACP-logo.png)
@@ -47,5 +55,4 @@ Spatial datasets are not part of this repository, but the paper reports summary 
 ![The James Hutton Institute logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/JHI_logo.jpg)
 ![Biomathemathics and Statistics Scotland (BioSS) logo](https://github.com/CamillaNegri/Ballycanew_Ptool/blob/main/Acknowledgments/BioSS_logo.png)
 
-## Preprint
-https://doi.org/10.31223/X5KX2R
+
